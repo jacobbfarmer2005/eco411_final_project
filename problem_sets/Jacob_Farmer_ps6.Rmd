@@ -84,24 +84,72 @@ Run this code to collapse the data by group and plot the time series of the aver
 
 How big would you say the treatment effect is in this data?
 
-**your answer here**
+**Based on the plotted time series, the treatment effect is about 2 units.**
 
 Now, write some code to estimate the standard TWFE model, including *unit* and *year* fixed effects.  The dependent variable is called *dep_var* and the treatment indicator is called *treat*
 
 
 ```{r}
-#your code here
+twfe_not_staggered <- plm(dep_var ~ treat,
+                          data = DiD_not_staggered,
+                          index = c("unit", "year"),
+                          model = "within",
+                          effect = "twoways")
+
+summary(twfe_not_staggered)$coefficients
 ```
 
 Now, write some code that simulates the above code 1,000 times and create a density plot of the estimates.  To do this, copy everything from the second and third code chunks of this file into the simulation, then also include the regression you just ran.  For each round, save the coefficient estimate that you get from the this regression on *treat*
 
 ```{r}
-#your code here
+df <- data.frame(matrix(ncol = 2, nrow = 1000))
+colnames(df) <- c("iteration", "estimate")
+
+for (i in 1:1000) {
+   unit <- tibble(
+    unit = 1:1000, 
+    unit_fe = rnorm(1000, 0, 0.5),
+    state = sample(rep(1:50, 20), 1000, replace = FALSE),
+    treat_group = ifelse(state >= 26, 1, 0),
+    hat_gamma = case_when(
+      treat_group == 1 ~ 2,
+      TRUE ~ 0
+    )) %>%
+    rowwise() %>% 
+    mutate(gamma = ifelse(treat_group == 1, rnorm(1, hat_gamma, .2), 0)) %>% 
+    ungroup()
+   
+   year <- tibble(
+    year = 1980:2015,
+    year_fe = rnorm(36, 0, 0.5))
+  
+  DiD_not_staggered <- crossing(unit, year) %>% 
+    mutate(error = rnorm(nrow(.), 0, 0.5),
+           treat = ifelse(treat_group == 1 & year >= 1998, 1, 0),
+           tau = ifelse(treat == 1, gamma, 0)) %>%
+    mutate(dep_var = unit_fe + year_fe + tau + error)
+  
+   twfe_not_staggered <- plm(dep_var ~ treat,
+                            data = DiD_not_staggered,
+                            index = c("unit", "year"),
+                            model = "within",
+                            effect = "twoways")
+   
+   df[i, 1] <- i
+  df[i, 2] <- summary(twfe_not_staggered)$coefficients[1, 1]
+}
+
+ggplot(df, aes(x = estimate)) +
+  geom_density(fill = "midnightblue", alpha = 0.4) +
+  geom_vline(xintercept = 2, color = "maroon", linetype = "dashed", size = 1) +
+  labs(x = "TWFE Estimate of treat", y = "Density",
+       title = "Distribution of TWFE Estimates (Not Staggered)") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 Given this distribution of estimates, how do we feel about using TWFE to estimate DiD treatment effects in settings like this with no staggered treatment and with constant treatment effects?
 
-**your answer here**
+**I feel good about using the TWFE to estimate the DiD treatment effects. The distribution plots shows that the estimates are fairly centered on 2.0, which is the true treatment effect observed in the first plot above. This means that the TWFE is unbiased and fairly precise in this setting. The TWFE is able to work because every observation is treated at the same time (not staggered) and the effect is constant over time.**
 
 The following code recreates the same regression but with *staggered treatment*, with 10 states getting treated in 1985, 10 getting treated in 1995, and 10 getting treated in 2005. Now the dataframe is called *DiD_staggered*.
 
@@ -192,7 +240,7 @@ ggplot(df_bacon) +
 
 Looking at the graph and the estimated coefficient, do you think we have a problem with bias using TWFE on units with staggered treatment and constant treatment effects?  Why or why not?
 
-**your answer here**
+**We do not have a bias using TWFE on staggered treatment because the TWFE is a weighted average of all the possible 2x2 DiD models. The already treated units will act as control for the future treated units, so bias may come into play here, but because the early moving group's treatment effect stays constant around 2 (shown by the Goodman-Bacon Decomposition plot) the shift from the treatment effect gets differenced out. Essentially, the already treated controls stay constant and thus follow the same trend the future treated units would have followed without treatment, satisfying the parallel trends assumption.**
 
 Now, we will incorporate **staggered treatment** with **heterogeneous treatment effects**, with our specific case being treatment effects that grow over time. Instead of a jump of two units at treatment, we will now have a treatment effect that grows at an average of .3 units per year.
 
@@ -266,15 +314,27 @@ Here is the graph to help visualize this:
 Now, the ATE is a slightly more complicated concept, but we can calculate it by taking the average value of "cumtau" for all the units where treat == 1.  Write some code to do that below:
 
 ```{r}
-#your code here
+ATE <- DiD_staggered_heterogeneous |> 
+  ungroup() |> 
+  filter(treat == 1) |> 
+  summarize(ATE = mean(cumtau))
+
+ATE
 ```
 
 Now run the TWFE specification.  Does TWFE capture the ATE?  If not, which direction is it biased?
 
 ```{r}
-#your code here
+plm_staggered_het <- plm(dep_var ~ treat,
+                         data = ungroup(DiD_staggered_heterogeneous),
+                         index = c("unit", "year"),
+                         model = "within",
+                         effect = "twoways")
+
+summary(plm_staggered_het)$coefficients
 ```
-**your answer here**
+
+**The TWFE does not capture the ATE. The ATE calculated above is 3.78 and the coefficient on the TWFE specification is 1.80, so the TWFE is biased downwards.**
 
 This code will plot the Bacon Decomp graph, do you see anything that concerns you?
 
@@ -289,7 +349,8 @@ ggplot(df_bacon) +
   labs(x = "Weight", y = "Estimate", shape = "Type") +
   geom_point()
 ```
-**your answer here**
+
+**The Goodman-Bacon decomposition shows that the earlier vs later treatment effects are not constant, which biases the TWFE via it's controlling mechanism. Essentially, the earlier treated trends are not constant, so they do not accurately act as controls for the later treated trends, which makes the observed treatment effect biased.**
 
 
 ***EXTRA CREDIT OPPORTUNIY***
@@ -298,10 +359,73 @@ For up to .5 additional points (20% of the assignment), create a simulation that
 
 
 ```{r}
-#your code here
+df_stag <- data.frame(matrix(ncol = 5, nrow = 1000))
+colnames(df_stag) <- c("iteration", "stag_level", "ATE", "twfe_estimate", "twfe_bias")
+
+for (i in 1:1000) {
+  stag_level <- sample(1:15, size = 1)
+  early_year  <- 1998 - stag_level
+  middle_year <- 1998
+  late_year   <- 1998 + stag_level
+  
+  unit <- tibble(
+    unit = 1:1000, 
+    unit_fe = rnorm(1000, 0, 0.5),
+    state = sample(rep(1:50, 20), 1000, replace = FALSE),
+    treat_group = ifelse(state > 40, 1,
+                         ifelse(state <= 40 & state > 30, 2,
+                                ifelse(state <= 30 & state > 20, 3, 0))),
+    hat_gamma = case_when(
+      treat_group >= 1 ~ .3,
+      TRUE ~ 0
+    )) %>%
+    rowwise() %>% 
+    mutate(gamma = ifelse(treat_group >= 1, rnorm(1, hat_gamma, .1), 0)) %>% 
+    ungroup()
+  
+  year <- tibble(
+    year = 1980:2015,
+    year_fe = rnorm(36, 0, 0.5))
+  
+  DiD_sim <- crossing(unit, year) %>% 
+    mutate(error = rnorm(nrow(.), 0, 0.5),
+           treat = ifelse(treat_group == 1 & year >= early_year, 1,
+                          ifelse(treat_group == 2 & year >= middle_year, 1,
+                                 ifelse(treat_group == 3 & year >= late_year, 1, 0))),
+           tau = ifelse(treat == 1, gamma, 0)) %>%
+    group_by(unit) %>% 
+    mutate(cumtau = cumsum(tau)) %>% 
+    ungroup() %>% 
+    mutate(dep_var = unit_fe + year_fe + cumtau + error)
+  
+   ATE <- DiD_sim |> 
+    filter(treat == 1) |> 
+    summarize(ATE = mean(cumtau)) |> 
+    pull(ATE)
+   
+   TWFE_stag <- plm(dep_var ~ treat,
+                 data = DiD_sim,
+                 index = c("unit", "year"),
+                 model = "within",
+                 effect = "twoways")
+   
+     twfe_estimate <- summary(TWFE_stag)$coefficients[1, 1]
+     
+     df_stag[i, 1] <- i
+  df_stag[i, 2] <- stag_level
+  df_stag[i, 3] <- ATE
+  df_stag[i, 4] <- twfe_estimate
+  df_stag[i, 5] <- abs(ATE - twfe_estimate)
+}
+
+ggplot(df_stag, aes(x = twfe_bias, y = stag_level)) +
+  geom_point(alpha = 0.4, color = "midnightblue") +
+  labs(x = "TWFE Bias (|ATE - TWFE estimate|)", y = "Stag Level",
+       title = "TWFE Bias vs. Amount of Staggering") +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
 What does this tell you about the importance of *how* staggered treatment is when estimating models like this?
 
-**your answer here**
+**The amount of staggering matters, because when the treatment dates are closer together the TWFE bias will be smaller (less time for treatment effect on the earlier treated observations, so they are more effective as controls). As the treatment dates grow, the bias generally would get larger as the treatment effect has more time to take effect. This pulls the estimate futher and futher from the true ATE as time goes on. So bias can take effect from staggered timing, but also from how spread out the treatment dates are and how much the treatment effect will change over time. More time can allow for potentially more effect. The scatter plot shows this by the increasing bias (and the growing range of bias, shown in the longer horizontal bars) as the stagger level increases.**
