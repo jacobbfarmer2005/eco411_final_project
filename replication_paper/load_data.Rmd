@@ -10,15 +10,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-cz_info <- haven::read_dta("../data/data/policy_pop_cz_5_13_22.dta")
+cz_info <- haven::read_dta("../replication_paper/data/data/policy_pop_cz_5_13_22.dta")
 
-cpuma_level_crosswalk <- haven::read_dta("../data/data/cw_cpuma2010_czone.dta")
+cpuma_level_crosswalk <- haven::read_dta("../replication_paper/data/data/cw_cpuma2010_czone.dta")
 
-sc_presence <- haven::read_dta("../data/data/287g_SC_EVerify_5_13_22.dta")
+sc_presence <- haven::read_dta("../replication_paper/data/data/287g_SC_EVerify_5_13_22.dta")
 
-cpuma_pop_counts <- readxl::read_excel("../data/data/CPUMA0010_summary.xls")
+cpuma_pop_counts <- readxl::read_excel("../replication_paper/data/data/CPUMA0010_summary.xls")
 
-bartick_variables <- haven::read_dta("data/final_bartik_acs_cpuma0010_updated.dta")
+bartick_variables <- haven::read_dta("../replication_paper/data/data/final_bartik_acs_cpuma0010_updated.dta")
 
-tradability_of_industrites <- haven::read_dta("data/tradable1_BHVT.dta")
+tradability_of_industrites <- haven::read_dta("../replication_paper/data/data/tradable1_BHVT.dta")
+
+east_SC_treat <- read_dta("../replication_paper/data/data/east_SC_treat.dta")
 ```
