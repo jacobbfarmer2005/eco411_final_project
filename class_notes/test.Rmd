@@ -1,0 +1,28 @@
+---
+title: "test"
+author: "Jacob Farmer"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+df <- data.frame(matrix(ncol=2,nrow=1000))
+colnames(df) <- c("T", "F")
+
+for (i in 1:1000) {
+
+X <- rnorm(1000)
+Y <- rnorm(1000)
+
+lm1 <- lm(Y~X)
+
+T <- summary(lm1)$coefficients[2,3]
+F <- linearHypothesis(lm1,"X=0")$F[2]
+
+df[i,1] <- T
+df[i,2] <- F
+}
