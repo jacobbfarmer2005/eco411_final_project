@@ -1,0 +1,27 @@
+---
+title: "data conversion"
+author: "Cam Townswick"
+date: "2026-11-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# install.packages("ipumsr")
+
+# load pkg and read in IPUMS data
+library(ipumsr)
+ddi <- read_ipums_ddi("usa_00001.xml")
+ipums_data <- read_ipums_micro(ddi)
+
+# save as compressed .rdata file
+save(ipums_data, file = "ipums_data.RData", compress = "xz")
+```
+
+
+
+
+
