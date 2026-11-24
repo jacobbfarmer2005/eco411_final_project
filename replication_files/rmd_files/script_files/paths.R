@@ -12,7 +12,7 @@ project_paths <- function() {
   clean  <- here::here("replication_files", "data", "clean")
 
   list(
-    raw_ddi   = here::here("replication_files", "usa_00001.xml"),
+    raw_ddi   = file.path(raw_dir, "usa_00001.xml"),
     raw_dat   = Sys.getenv("ACS_DAT", raw_default),
     bartik    = file.path(author, "final_bartik_acs_cpuma0010_updated.dta"),
     cw        = file.path(author, "cw_cpuma2010_czone.dta"),

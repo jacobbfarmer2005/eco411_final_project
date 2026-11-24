@@ -4,7 +4,7 @@
 
 **Goal:** Replicate Table 3 and Figure 2 of East et al. (2023) and deliver the 5–7 page replication paper due **December 4, 2026**. Along the way, improve the existing Section 2 (ACS cleaning) and Section 3 (CZ panel) code so it is tested, portable and faithful to the authors' Stata code.
 
-**Architecture:** Every analysis step is a function in `replication_files/R/*.R`, tested with `testthat` on toy or simulated data. Thin R Markdown runners call those functions in order: `01_clean_acs.Rmd` (clean ACS) → `02_build_panel.Rmd` (CZ panel) → `03_results.Rmd` (regressions, Table 3, Figure 2). Results are written to `replication_files/output/`. The paper (`paper/paper.Rmd` → Word) reads only those output files, so it can be knitted without the microdata. All file locations come from one `project_paths()` function built on `here::here()`.
+**Architecture:** Every analysis step is a function in `replication_files/.rmd_files/script_files/*.R`, tested with `testthat` on toy or simulated data. Thin R Markdown runners call those functions in order: `01_clean_acs.Rmd` (clean ACS) → `02_build_panel.Rmd` (CZ panel) → `03_results.Rmd` (regressions, Table 3, Figure 2). Results are written to `replication_files/output/`. The paper (`paper/paper.Rmd` → Word) reads only those output files, so it can be knitted without the microdata. All file locations come from one `project_paths()` function built on `here::here()`.
 
 **Tech Stack:** R 4.6.1, dplyr (Section 2), data.table (Sections 3–4), ipumsr, haven, here, fixest, ggplot2, cowplot, testthat 3e, withr, rmarkdown/knitr with pandoc citeproc (Word output; no LaTeX is installed).
 
@@ -91,23 +91,23 @@
 | File | Status | Responsibility |
 |---|---|---|
 | `.gitignore` | modify | Ignore raw and clean microdata |
-| `replication_files/R/paths.R` | create | `project_paths()`, `check_inputs()` |
-| `replication_files/R/clean_acs.R` | create | Section 2 functions: read → flag → wages → checks → slim |
-| `replication_files/R/build_panel.R` | create | Section 3 functions: CPUMA aggregates → CZ panel → outcomes → paper comparison |
-| `replication_files/tests/testthat/helper-setup.R` | create | Sources the `R/` files; `toy_person()` builder |
+| `replication_files/.rmd_files/script_files/paths.R` | create | `project_paths()`, `check_inputs()` |
+| `replication_files/.rmd_files/script_files/clean_acs.R` | create | Section 2 functions: read → flag → wages → checks → slim |
+| `replication_files/.rmd_files/script_files/build_panel.R` | create | Section 3 functions: CPUMA aggregates → CZ panel → outcomes → paper comparison |
+| `replication_files/tests/testthat/helper-setup.R` | create | Sources the `script_files/` files; `toy_person()` builder |
 | `replication_files/tests/testthat/test-paths.R` | create | Tests for paths.R |
 | `replication_files/tests/testthat/test-clean_acs.R` | create | Tests for clean_acs.R |
 | `replication_files/tests/testthat/test-build_panel.R` | create | Tests for build_panel.R |
-| `replication_files/01_clean_acs.Rmd` | create | Thin Section 2 runner (restores the lost source) |
-| `replication_files/02_build_panel.Rmd` | create | Thin Section 3 runner (replaces `section 3 R.Rmd`, which stays until the group removes it) |
+| `replication_files/.rmd_files/01_clean_acs.Rmd` | create | Thin Section 2 runner (restores the lost source) |
+| `replication_files/.rmd_files/02_build_panel.Rmd` | create | Thin Section 3 runner (replaces `section 3 R.Rmd`, which stays until the group removes it) |
 | `README.md` | modify | How to get the data and run everything |
-| `replication_files/R/estimate.R` | create | Leads/lags, two-way fixed effects SC model, Table 3 estimates, distributed-lag event study |
-| `replication_files/R/tables.R` | create | Paper-style Table 3 and the comparison with the paper |
-| `replication_files/R/figures.R` | create | Figure 2 (4-panel event study) |
+| `replication_files/.rmd_files/script_files/estimate.R` | create | Leads/lags, two-way fixed effects SC model, Table 3 estimates, distributed-lag event study |
+| `replication_files/.rmd_files/script_files/tables.R` | create | Paper-style Table 3 and the comparison with the paper |
+| `replication_files/.rmd_files/script_files/figures.R` | create | Figure 2 (4-panel event study) |
 | `replication_files/tests/testthat/test-estimate.R` | create | Simulated-panel tests for estimate.R |
 | `replication_files/tests/testthat/test-tables.R` | create | Tests for tables.R |
 | `replication_files/tests/testthat/test-figures.R` | create | Tests for figures.R |
-| `replication_files/03_results.Rmd` | create | Thin results runner that writes `output/` |
+| `replication_files/.rmd_files/03_results.Rmd` | create | Thin results runner that writes `output/` |
 | `replication_files/output/` | create (committed) | `table3_estimates.csv`, `table3_compare.csv`, `event_study.csv`, `figure2.png` |
 | `paper/paper.Rmd` | create | The replication paper (Word output) |
 | `paper/references.bib` | create | Bibliography (at least 5 entries) |
@@ -118,7 +118,7 @@
 
 **Files:**
 - Modify: `.gitignore`
-- Create: `replication_files/R/paths.R`
+- Create: `replication_files/.rmd_files/script_files/paths.R`
 - Create: `replication_files/tests/testthat/helper-setup.R`
 - Test: `replication_files/tests/testthat/test-paths.R`
 
@@ -157,9 +157,9 @@ replication_files/data/clean/
 Create `replication_files/tests/testthat/helper-setup.R`:
 
 ```r
-# Source every analysis file, so later tasks can add files to R/ without
+# Source every analysis file, so later tasks can add files to script_files/ without
 # editing this helper.
-for (f in list.files(here::here("replication_files", "R"), pattern = "\\.R$",
+for (f in list.files(here::here("replication_files", ".rmd_files", "script_files"), pattern = "\\.R$",
                      full.names = TRUE)) {
   source(f)
 }
@@ -178,7 +178,7 @@ toy_person <- function(...) {
 }
 ```
 
-Create the `R/` folder: `mkdir -p replication_files/R`.
+Create the `script_files/` folder: `mkdir -p replication_files/.rmd_files/script_files`.
 
 - [ ] **Step 4: Write the failing tests**
 
@@ -215,7 +215,7 @@ Expected: FAIL with `could not find function "project_paths"`.
 
 - [ ] **Step 6: Write `paths.R`**
 
-Create `replication_files/R/paths.R`:
+Create `replication_files/.rmd_files/script_files/paths.R`:
 
 ```r
 # Shared file locations, built from the repo root so the code runs on any
@@ -269,7 +269,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 2: Section 2 cleaning functions, restored and fixed
 
 **Files:**
-- Create: `replication_files/R/clean_acs.R`
+- Create: `replication_files/.rmd_files/script_files/clean_acs.R`
 - Test: `replication_files/tests/testthat/test-clean_acs.R`
 
 **Interfaces:**
@@ -407,7 +407,7 @@ Expected: FAIL with `could not find function "check_acs_vars"` (and similar erro
 
 - [ ] **Step 3: Write `clean_acs.R`**
 
-Create `replication_files/R/clean_acs.R`. Functions kept from `Section 2.html` are unchanged except where a comment notes a fix.
+Create `replication_files/.rmd_files/script_files/clean_acs.R`. Functions kept from `Section 2.html` are unchanged except where a comment notes a fix.
 
 ```r
 # Section 2: clean the person-level ACS extract.
@@ -563,7 +563,7 @@ Expected: `FAIL 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add replication_files/R/clean_acs.R replication_files/tests/testthat/test-clean_acs.R
+git add replication_files/.rmd_files/script_files/clean_acs.R replication_files/tests/testthat/test-clean_acs.R
 git commit -m "Restore Section 2 cleaning functions with tests and Stata fidelity fixes
 
 Recovers the code from Section 2.html, reads the ACS in filtered chunks,
@@ -578,7 +578,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 3: Restore the Section 2 runner and produce `acs_person.rds`
 
 **Files:**
-- Create: `replication_files/01_clean_acs.Rmd`
+- Create: `replication_files/.rmd_files/01_clean_acs.Rmd`
 
 **Interfaces:**
 - Consumes: `project_paths()`, `check_inputs()` (Task 1); all of `clean_acs.R` (Task 2).
@@ -592,14 +592,14 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 Check it:
 
-Run: `Rscript -e "source('replication_files/R/paths.R'); p <- project_paths(); print(p$raw_dat); check_inputs(c(p$raw_ddi, p$raw_dat))"`
+Run: `Rscript -e "source('replication_files/.rmd_files/script_files/paths.R'); p <- project_paths(); print(p$raw_dat); check_inputs(c(p$raw_ddi, p$raw_dat))"`
 Expected: prints the path and no error.
 
 **If the file cannot be found, stop here and ask the user.** Do not continue with a fabricated or partial file.
 
 - [ ] **Step 2: Write the runner**
 
-Create `replication_files/01_clean_acs.Rmd`:
+Create `replication_files/.rmd_files/01_clean_acs.Rmd`:
 
 ````markdown
 ---
@@ -609,12 +609,12 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
-source(here::here("replication_files", "R", "paths.R"))
-source(here::here("replication_files", "R", "clean_acs.R"))
+source(here::here("replication_files", ".rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", ".rmd_files", "script_files", "clean_acs.R"))
 paths <- project_paths()
 ```
 
-Functions live in `R/clean_acs.R` and are tested in `tests/testthat/`.
+Functions live in `script_files/clean_acs.R` and are tested in `tests/testthat/`.
 Set `ACS_DAT` to read the raw IPUMS file from a non-default location.
 
 ```{r inputs}
@@ -643,7 +643,7 @@ save_clean(slim_for_panel(acs), paths$acs_clean)
 
 - [ ] **Step 3: Knit it**
 
-Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/01_clean_acs.Rmd')"`
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/.rmd_files/01_clean_acs.Rmd')"`
 
 Expected:
 - The render finishes.
@@ -658,7 +658,7 @@ Run: `git status --short`
 Expected: `01_clean_acs.Rmd` and `01_clean_acs.html` are listed. Nothing under `data/clean/` is listed.
 
 ```bash
-git add "replication_files/01_clean_acs.Rmd" "replication_files/01_clean_acs.html"
+git add "replication_files/.rmd_files/01_clean_acs.Rmd" "replication_files/.rmd_files/01_clean_acs.html"
 git commit -m "Restore Section 2 R Markdown as a thin runner
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -669,7 +669,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 4: Section 3 panel functions with all Table 3 / Figure 2 outcomes
 
 **Files:**
-- Create: `replication_files/R/build_panel.R`
+- Create: `replication_files/.rmd_files/script_files/build_panel.R`
 - Test: `replication_files/tests/testthat/test-build_panel.R`
 
 **Interfaces:**
@@ -779,7 +779,7 @@ Expected: FAIL with `could not find function "count_cpuma"`.
 
 - [ ] **Step 3: Write `build_panel.R`**
 
-Create `replication_files/R/build_panel.R`. Functions kept from `section 3 R.Rmd` are unchanged unless a comment says otherwise.
+Create `replication_files/.rmd_files/script_files/build_panel.R`. Functions kept from `section 3 R.Rmd` are unchanged unless a comment says otherwise.
 
 ```r
 # Section 3: build the commuting-zone-by-year panel.
@@ -936,7 +936,7 @@ Expected: `FAIL 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add replication_files/R/build_panel.R replication_files/tests/testthat/test-build_panel.R
+git add replication_files/.rmd_files/script_files/build_panel.R replication_files/tests/testthat/test-build_panel.R
 git commit -m "Move Section 3 panel functions to R/ with tests; add Table 3 and Figure 2 wages
 
 Adds female/male LEFB and US-born wages, and keeps CZ-years with no
@@ -950,9 +950,9 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 5: Paper comparison, thin Section 3 runner, README
 
 **Files:**
-- Modify: `replication_files/R/build_panel.R` (append)
+- Modify: `replication_files/.rmd_files/script_files/build_panel.R` (append)
 - Modify: `replication_files/tests/testthat/test-build_panel.R` (append)
-- Create: `replication_files/02_build_panel.Rmd`
+- Create: `replication_files/.rmd_files/02_build_panel.Rmd`
 - Modify: `README.md`
 
 **Interfaces:**
@@ -1032,12 +1032,12 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
-source(here::here("replication_files", "R", "paths.R"))
-source(here::here("replication_files", "R", "build_panel.R"))
+source(here::here("replication_files", ".rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", ".rmd_files", "script_files", "build_panel.R"))
 paths <- project_paths()
 ```
 
-Functions live in `R/build_panel.R` and are tested in `tests/testthat/`.
+Functions live in `script_files/build_panel.R` and are tested in `tests/testthat/`.
 
 ```{r inputs}
 check_inputs(c(paths$acs_clean, paths$bartik, paths$cw, paths$policy))
@@ -1072,7 +1072,7 @@ save_panel(panel, paths$cz_panel)
 
 - [ ] **Step 6: Knit it on the real data**
 
-Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/02_build_panel.Rmd')"`
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/.rmd_files/02_build_panel.Rmd')"`
 
 Expected:
 - `diagnose_merges` prints three zeros.
@@ -1092,20 +1092,20 @@ Append:
 1. Get the raw IPUMS extract `usa_00001.dat` (or `.dat.gz`) and put it in
    `replication_files/data/raw/`, or set `Sys.setenv(ACS_DAT = "path/to/usa_00001.dat")`.
    `replication_files/ipums_data.RData` is truncated and cannot be loaded.
-2. Knit `replication_files/01_clean_acs.Rmd`. This writes `data/clean/acs_person.rds`.
-3. Knit `replication_files/02_build_panel.Rmd`. This writes `data/clean/cz_panel.rds`
+2. Knit `replication_files/.rmd_files/01_clean_acs.Rmd`. This writes `data/clean/acs_person.rds`.
+3. Knit `replication_files/.rmd_files/02_build_panel.Rmd`. This writes `data/clean/cz_panel.rds`
    and prints a comparison with the paper's Table 3/4 means.
 4. Tests: `testthat::test_dir("replication_files/tests/testthat")` from the repo root.
 
-Functions live in `replication_files/R/`; the `.Rmd` files only call them.
+Functions live in `replication_files/.rmd_files/script_files/`; the `.Rmd` files only call them.
 Data files under `replication_files/data/` are not committed.
 ```
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add replication_files/R/build_panel.R replication_files/tests/testthat/test-build_panel.R \
-  replication_files/02_build_panel.Rmd replication_files/02_build_panel.html README.md
+git add replication_files/.rmd_files/script_files/build_panel.R replication_files/tests/testthat/test-build_panel.R \
+  replication_files/.rmd_files/02_build_panel.Rmd replication_files/.rmd_files/02_build_panel.html README.md
 git commit -m "Make Section 3 a thin runner with a CZ-level comparison to the paper
 
 <paste the compare_to_paper table here>
@@ -1118,7 +1118,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 6: Treatment timing variables and the Table 3 regression model
 
 **Files:**
-- Create: `replication_files/R/estimate.R`
+- Create: `replication_files/.rmd_files/script_files/estimate.R`
 - Modify: `replication_files/tests/testthat/helper-setup.R` (append `sim_panel()`)
 - Test: `replication_files/tests/testthat/test-estimate.R`
 
@@ -1224,7 +1224,7 @@ Expected: FAIL with `could not find function "add_sc_leads_lags"`.
 
 - [ ] **Step 4: Write `estimate.R`**
 
-Create `replication_files/R/estimate.R`:
+Create `replication_files/.rmd_files/script_files/estimate.R`:
 
 ```r
 # Section 4: estimate the effects of Secure Communities.
@@ -1310,7 +1310,7 @@ Expected: `FAIL 0`. fixest may print notes about removed NA observations; those 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add replication_files/R/estimate.R replication_files/tests/testthat/test-estimate.R \
+git add replication_files/.rmd_files/script_files/estimate.R replication_files/tests/testthat/test-estimate.R \
   replication_files/tests/testthat/helper-setup.R
 git commit -m "Add SC leads/lags and the Table 3 two-way fixed effects model
 
@@ -1322,7 +1322,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 7: Distributed-lag event study (Figure 2 estimates)
 
 **Files:**
-- Modify: `replication_files/R/estimate.R` (append)
+- Modify: `replication_files/.rmd_files/script_files/estimate.R` (append)
 - Modify: `replication_files/tests/testthat/test-estimate.R` (append)
 
 **Interfaces:**
@@ -1404,7 +1404,7 @@ Expected: `FAIL 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add replication_files/R/estimate.R replication_files/tests/testthat/test-estimate.R
+git add replication_files/.rmd_files/script_files/estimate.R replication_files/tests/testthat/test-estimate.R
 git commit -m "Add distributed-lag event study with cumulated effects
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1415,7 +1415,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 8: Paper-style Table 3 and the comparison with the paper
 
 **Files:**
-- Create: `replication_files/R/tables.R`
+- Create: `replication_files/.rmd_files/script_files/tables.R`
 - Test: `replication_files/tests/testthat/test-tables.R`
 
 **Interfaces:**
@@ -1484,7 +1484,7 @@ Expected: FAIL with `could not find function "stars"`.
 
 - [ ] **Step 3: Write `tables.R`**
 
-Create `replication_files/R/tables.R`:
+Create `replication_files/.rmd_files/script_files/tables.R`:
 
 ```r
 # Format Table 3 the way the paper prints it, and compare with the paper.
@@ -1544,7 +1544,7 @@ Expected: `FAIL 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add replication_files/R/tables.R replication_files/tests/testthat/test-tables.R
+git add replication_files/.rmd_files/script_files/tables.R replication_files/tests/testthat/test-tables.R
 git commit -m "Add paper-style Table 3 formatting and comparison with the paper
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1555,7 +1555,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 9: Figure 2
 
 **Files:**
-- Create: `replication_files/R/figures.R`
+- Create: `replication_files/.rmd_files/script_files/figures.R`
 - Test: `replication_files/tests/testthat/test-figures.R`
 
 **Interfaces:**
@@ -1603,7 +1603,7 @@ Expected: FAIL with `could not find function "plot_event_study"`.
 
 - [ ] **Step 3: Write `figures.R`**
 
-Create `replication_files/R/figures.R`:
+Create `replication_files/.rmd_files/script_files/figures.R`:
 
 ```r
 # Figure 2: distributed-lag event studies, styled after the paper.
@@ -1649,7 +1649,7 @@ Expected: `FAIL 0`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add replication_files/R/figures.R replication_files/tests/testthat/test-figures.R
+git add replication_files/.rmd_files/script_files/figures.R replication_files/tests/testthat/test-figures.R
 git commit -m "Add Figure 2 event-study plots
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1660,7 +1660,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 10: Results runner on the real data
 
 **Files:**
-- Create: `replication_files/03_results.Rmd`
+- Create: `replication_files/.rmd_files/03_results.Rmd`
 - Create (generated, committed): `replication_files/output/table3_estimates.csv`, `table3_compare.csv`, `event_study.csv`, `figure2.png`
 
 **Interfaces:**
@@ -1672,7 +1672,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the runner**
 
-Create `replication_files/03_results.Rmd`:
+Create `replication_files/.rmd_files/03_results.Rmd`:
 
 ````markdown
 ---
@@ -1682,7 +1682,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
-for (f in list.files(here::here("replication_files", "R"), pattern = "\\.R$",
+for (f in list.files(here::here("replication_files", ".rmd_files", "script_files"), pattern = "\\.R$",
                      full.names = TRUE)) source(f)
 paths <- project_paths()
 dir.create(paths$output, showWarnings = FALSE)
@@ -1720,7 +1720,7 @@ ggplot2::ggsave(file.path(paths$output, "figure2.png"), fig,
 
 - [ ] **Step 2: Knit it**
 
-Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/03_results.Rmd')"`
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/.rmd_files/03_results.Rmd')"`
 
 Expected:
 - All four files appear in `replication_files/output/`.
@@ -1732,7 +1732,7 @@ If a coefficient differs by more than 2 paper standard errors, do not change the
 - [ ] **Step 3: Commit (outputs are small, contain no microdata, and the paper needs them)**
 
 ```bash
-git add "replication_files/03_results.Rmd" "replication_files/03_results.html" replication_files/output
+git add "replication_files/.rmd_files/03_results.Rmd" "replication_files/.rmd_files/03_results.html" replication_files/output
 git commit -m "Run Table 3 and Figure 2 on the real panel
 
 <paste the compare_table3 table here>
@@ -1750,7 +1750,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - Generated: `paper/paper.docx` (committed for the group to review)
 
 **Interfaces:**
-- Consumes: the four files in `replication_files/output/` (Task 10), plus `format_table3()` and `TABLE3_OUTCOMES` (sourced from `R/`).
+- Consumes: the four files in `replication_files/output/` (Task 10), plus `format_table3()` and `TABLE3_OUTCOMES` (sourced from `script_files/`).
 - Produces: a Word document with six section headings and the content checklists hidden in HTML comments (pandoc does not render them). It includes Table 1 (replicated Table 3), Table 2 (comparison with the paper), Figure 1 (replicated Figure 2), inline numbers and a bibliography.
 
 - [ ] **Step 1: Write `references.bib`**
@@ -1854,7 +1854,7 @@ nocite: '@*'
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(data.table)
-for (f in list.files(here::here("replication_files", "R"), pattern = "\\.R$",
+for (f in list.files(here::here("replication_files", ".rmd_files", "script_files"), pattern = "\\.R$",
                      full.names = TRUE)) source(f)
 out <- here::here("replication_files", "output")
 t3  <- fread(file.path(out, "table3_estimates.csv"))
@@ -2004,7 +2004,7 @@ Expected: `words:` between about 1,800 and 2,600. This count includes tables and
 - [ ] **Step 4: Add run instructions to `README.md`.** Append:
 
 ```markdown
-5. Knit `replication_files/03_results.Rmd`. This writes Table 3 and Figure 2 to `replication_files/output/`.
+5. Knit `replication_files/.rmd_files/03_results.Rmd`. This writes Table 3 and Figure 2 to `replication_files/output/`.
 6. Knit `paper/paper.Rmd` to produce `paper/paper.docx` (needs only `replication_files/output/`).
 ```
 

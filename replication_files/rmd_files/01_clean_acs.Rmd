@@ -5,12 +5,12 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
-source(here::here("replication_files", "R", "paths.R"))
-source(here::here("replication_files", "R", "clean_acs.R"))
+source(here::here("replication_files", ".rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", ".rmd_files", "script_files", "clean_acs.R"))
 paths <- project_paths()
 ```
 
-Functions live in `R/clean_acs.R` and are tested in `tests/testthat/`.
+Functions live in `script_files/clean_acs.R` and are tested in `tests/testthat/`.
 Set `ACS_DAT` to read the raw IPUMS file from a non-default location.
 
 ```{r inputs}

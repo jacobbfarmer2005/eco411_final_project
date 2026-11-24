@@ -353,9 +353,9 @@ display: none;
 </div>
 
 
-<p>Functions live in <code>R/clean_acs.R</code> and are tested in
-<code>tests/testthat/</code>. Set <code>ACS_DAT</code> to read the raw
-IPUMS file from a non-default location.</p>
+<p>Functions live in <code>script_files/clean_acs.R</code> and are
+tested in <code>tests/testthat/</code>. Set <code>ACS_DAT</code> to read
+the raw IPUMS file from a non-default location.</p>
 <pre class="r"><code>check_inputs(c(paths$raw_ddi, paths$raw_dat))</code></pre>
 <pre class="r"><code>acs &lt;- read_acs(paths$raw_ddi, paths$raw_dat) |&gt;
   flag_nativity_education() |&gt;

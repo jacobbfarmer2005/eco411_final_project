@@ -2,7 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-replication_files/data/raw/
+replication_files/data/raw/*
+!replication_files/data/raw/*.xml
 replication_files/data/clean/
 *.dat
 *.dat.gz
