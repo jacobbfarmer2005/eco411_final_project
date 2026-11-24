@@ -2,3 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+replication_files/data/raw/
+replication_files/data/clean/
+*.dat
+*.dat.gz
+.DS_Store
+desktop.ini
