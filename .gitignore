@@ -4,7 +4,8 @@
 .Ruserdata
 replication_files/data/raw/*
 !replication_files/data/raw/*.xml
-replication_files/data/clean/
+replication_files/data/clean/*
+!replication_files/data/clean/cz_panel.rds
 *.dat
 *.dat.gz
 .DS_Store
