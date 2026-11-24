@@ -5,8 +5,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
-source(here::here("replication_files", ".rmd_files", "script_files", "paths.R"))
-source(here::here("replication_files", ".rmd_files", "script_files", "build_panel.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "build_panel.R"))
 paths <- project_paths()
 ```
 

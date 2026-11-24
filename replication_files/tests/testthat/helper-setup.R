@@ -1,6 +1,6 @@
 # Source every analysis file, so later tasks can add files to script_files/ without
 # editing this helper.
-for (f in list.files(here::here("replication_files", ".rmd_files", "script_files"), pattern = "\\.R$",
+for (f in list.files(here::here("replication_files", "rmd_files", "script_files"), pattern = "\\.R$",
                      full.names = TRUE)) {
   source(f)
 }
