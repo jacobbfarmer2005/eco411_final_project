@@ -78,3 +78,21 @@ test_that("trim_panel keeps 2005-2014, non-missing SC, and drops CZ 34701", {
                   SC_frac = c(0, 0, 1, NA))
   expect_equal(trim_panel(p)$czone, 1L)
 })
+
+test_that("compare_to_paper uses pop2000 weights and skips missing values", {
+  tg <- data.table(var = "lnw_lefb", paper_mean = 2.74, paper_n = 7383)
+  p  <- data.table(lnw_lefb = c(2, 3, NA), pop2000 = c(1, 3, 100))
+  out <- compare_to_paper(p, tg)
+  expect_equal(out$ours_mean, 2.75)
+  expect_equal(out$ours_n, 2L)
+  expect_equal(out$diff_mean, 0.01)
+})
+
+test_that("compare_to_paper does not modify its targets table", {
+  tg <- data.table(var = "lnw_lefb", paper_mean = 2.74, paper_n = 7383)
+  p  <- data.table(lnw_lefb = 2, pop2000 = 1)
+  compare_to_paper(p, tg)
+  compare_to_paper(p, tg)
+  expect_equal(names(tg), c("var", "paper_mean", "paper_n"))
+  expect_equal(names(PAPER_TARGETS), c("var", "paper_mean", "paper_n"))
+})

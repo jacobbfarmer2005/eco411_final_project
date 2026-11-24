@@ -154,3 +154,27 @@ check_panel <- function(p) {
   }
   p
 }
+
+# "Y mean" and observation counts from Tables 3 and 4 of East et al. (2023).
+PAPER_TARGETS <- data.table(
+  var = c("emp_share_lefb", "emp_share_lefb_f", "emp_share_lefb_m", "emp_share_usb",
+          "lnw_lefb", "lnw_lefb_f", "lnw_lefb_m", "lnw_usb"),
+  paper_mean = c(6.75, 2.55, 4.21, 58.61, 2.74, 2.59, 2.81, 3.18),
+  paper_n    = c(7400, 7400, 7400, 7400, 7383, 7331, 7367, 7400)
+)
+
+# Our pop2000-weighted means and non-missing counts next to the paper's.
+# Works on a copy so the targets table is never modified.
+compare_to_paper <- function(p, targets = PAPER_TARGETS) {
+  out <- copy(targets)
+  out[, `:=`(
+    ours_mean = vapply(var, function(v) {
+      ok <- !is.na(p[[v]])
+      weighted.mean(p[[v]][ok], p$pop2000[ok])
+    }, numeric(1), USE.NAMES = FALSE),
+    ours_n = vapply(var, function(v) sum(!is.na(p[[v]])), integer(1),
+                    USE.NAMES = FALSE)
+  )]
+  out[, diff_mean := round(ours_mean - paper_mean, 3)]
+  out[, .(var, paper_mean, ours_mean, diff_mean, paper_n, ours_n)]
+}

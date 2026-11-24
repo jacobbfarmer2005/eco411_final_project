@@ -1,0 +1,46 @@
+---
+title: "02_build_panel"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
+source(here::here("replication_files", "R", "paths.R"))
+source(here::here("replication_files", "R", "build_panel.R"))
+paths <- project_paths()
+```
+
+Functions live in `R/build_panel.R` and are tested in `tests/testthat/`.
+Input: `data/clean/acs_person.rds` from `01_clean_acs.Rmd`.
+
+```{r inputs}
+check_inputs(c(paths$acs_clean, paths$bartik, paths$cw, paths$policy))
+
+acs <- load_acs(paths$acs_clean)
+cw  <- read_dta_dt(paths$cw)
+
+cp <- count_cpuma(acs) |>
+  merge(wage_cpuma(acs), by = c("cpuma0010", "year"), all.x = TRUE) |>
+  add_bartik(read_dta_dt(paths$bartik))
+
+diagnose_merges(cp, cw)
+```
+
+```{r panel}
+panel <- join_crosswalk(cp, cw) |>
+  collapse_cz() |>
+  add_policy(read_dta_dt(paths$policy)) |>
+  trim_panel() |>
+  make_outcomes() |>
+  check_panel()
+```
+
+## Comparison with the paper (Tables 3 and 4, "Y mean")
+
+```{r compare}
+knitr::kable(compare_to_paper(panel), digits = 3)
+```
+
+```{r save}
+save_panel(panel, paths$cz_panel)
+```
