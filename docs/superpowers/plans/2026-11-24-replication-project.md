@@ -4,7 +4,7 @@
 
 **Goal:** Replicate Table 3 and Figure 2 of East et al. (2023) and deliver the 5–7 page replication paper due **December 4, 2026**. Along the way, improve the existing Section 2 (ACS cleaning) and Section 3 (CZ panel) code so it is tested, portable and faithful to the authors' Stata code.
 
-**Architecture:** Every analysis step is a function in `replication_files/R/*.R`, tested with `testthat` on toy or simulated data. Thin R Markdown runners call those functions in order: `section 2 R.Rmd` (clean ACS) → `section 3 R.Rmd` (CZ panel) → `section 4 R.Rmd` (regressions, Table 3, Figure 2). Results are written to `replication_files/output/`. The paper (`paper/paper.Rmd` → Word) reads only those output files, so it can be knitted without the microdata. All file locations come from one `project_paths()` function built on `here::here()`.
+**Architecture:** Every analysis step is a function in `replication_files/R/*.R`, tested with `testthat` on toy or simulated data. Thin R Markdown runners call those functions in order: `01_clean_acs.Rmd` (clean ACS) → `02_build_panel.Rmd` (CZ panel) → `03_results.Rmd` (regressions, Table 3, Figure 2). Results are written to `replication_files/output/`. The paper (`paper/paper.Rmd` → Word) reads only those output files, so it can be knitted without the microdata. All file locations come from one `project_paths()` function built on `here::here()`.
 
 **Tech Stack:** R 4.6.1, dplyr (Section 2), data.table (Sections 3–4), ipumsr, haven, here, fixest, ggplot2, cowplot, testthat 3e, withr, rmarkdown/knitr with pandoc citeproc (Word output; no LaTeX is installed).
 
@@ -98,8 +98,8 @@
 | `replication_files/tests/testthat/test-paths.R` | create | Tests for paths.R |
 | `replication_files/tests/testthat/test-clean_acs.R` | create | Tests for clean_acs.R |
 | `replication_files/tests/testthat/test-build_panel.R` | create | Tests for build_panel.R |
-| `replication_files/section 2 R.Rmd` | create | Thin Section 2 runner (restores the lost source) |
-| `replication_files/section 3 R.Rmd` | modify | Thin Section 3 runner |
+| `replication_files/01_clean_acs.Rmd` | create | Thin Section 2 runner (restores the lost source) |
+| `replication_files/02_build_panel.Rmd` | create | Thin Section 3 runner (replaces `section 3 R.Rmd`, which stays until the group removes it) |
 | `README.md` | modify | How to get the data and run everything |
 | `replication_files/R/estimate.R` | create | Leads/lags, two-way fixed effects SC model, Table 3 estimates, distributed-lag event study |
 | `replication_files/R/tables.R` | create | Paper-style Table 3 and the comparison with the paper |
@@ -107,7 +107,7 @@
 | `replication_files/tests/testthat/test-estimate.R` | create | Simulated-panel tests for estimate.R |
 | `replication_files/tests/testthat/test-tables.R` | create | Tests for tables.R |
 | `replication_files/tests/testthat/test-figures.R` | create | Tests for figures.R |
-| `replication_files/section 4 R.Rmd` | create | Thin results runner that writes `output/` |
+| `replication_files/03_results.Rmd` | create | Thin results runner that writes `output/` |
 | `replication_files/output/` | create (committed) | `table3_estimates.csv`, `table3_compare.csv`, `event_study.csv`, `figure2.png` |
 | `paper/paper.Rmd` | create | The replication paper (Word output) |
 | `paper/references.bib` | create | Bibliography (at least 5 entries) |
@@ -578,7 +578,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 3: Restore the Section 2 runner and produce `acs_person.rds`
 
 **Files:**
-- Create: `replication_files/section 2 R.Rmd`
+- Create: `replication_files/01_clean_acs.Rmd`
 
 **Interfaces:**
 - Consumes: `project_paths()`, `check_inputs()` (Task 1); all of `clean_acs.R` (Task 2).
@@ -599,7 +599,7 @@ Expected: prints the path and no error.
 
 - [ ] **Step 2: Write the runner**
 
-Create `replication_files/section 2 R.Rmd`:
+Create `replication_files/01_clean_acs.Rmd`:
 
 ````markdown
 ---
@@ -643,7 +643,7 @@ save_clean(slim_for_panel(acs), paths$acs_clean)
 
 - [ ] **Step 3: Knit it**
 
-Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/section 2 R.Rmd')"`
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/01_clean_acs.Rmd')"`
 
 Expected:
 - The render finishes.
@@ -655,10 +655,10 @@ For the sanity check, compare the 2005 `ft_wage_obs` to the old HTML: the LEFB p
 - [ ] **Step 4: Confirm the RDS is not tracked, then commit**
 
 Run: `git status --short`
-Expected: `section 2 R.Rmd` and `section 2 R.html` are listed. Nothing under `data/clean/` is listed.
+Expected: `01_clean_acs.Rmd` and `01_clean_acs.html` are listed. Nothing under `data/clean/` is listed.
 
 ```bash
-git add "replication_files/section 2 R.Rmd" "replication_files/section 2 R.html"
+git add "replication_files/01_clean_acs.Rmd" "replication_files/01_clean_acs.html"
 git commit -m "Restore Section 2 R Markdown as a thin runner
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -952,7 +952,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `replication_files/R/build_panel.R` (append)
 - Modify: `replication_files/tests/testthat/test-build_panel.R` (append)
-- Modify: `replication_files/section 3 R.Rmd` (replace its contents)
+- Create: `replication_files/02_build_panel.Rmd`
 - Modify: `README.md`
 
 **Interfaces:**
@@ -1022,7 +1022,7 @@ compare_to_paper <- function(p, targets = PAPER_TARGETS) {
 Run: `Rscript -e "testthat::test_dir('replication_files/tests/testthat')"`
 Expected: `FAIL 0`.
 
-- [ ] **Step 5: Replace `section 3 R.Rmd` with the thin runner**
+- [ ] **Step 5: Create the thin runner `02_build_panel.Rmd`**
 
 ````markdown
 ---
@@ -1072,7 +1072,7 @@ save_panel(panel, paths$cz_panel)
 
 - [ ] **Step 6: Knit it on the real data**
 
-Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/section 3 R.Rmd')"`
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/02_build_panel.Rmd')"`
 
 Expected:
 - `diagnose_merges` prints three zeros.
@@ -1092,8 +1092,8 @@ Append:
 1. Get the raw IPUMS extract `usa_00001.dat` (or `.dat.gz`) and put it in
    `replication_files/data/raw/`, or set `Sys.setenv(ACS_DAT = "path/to/usa_00001.dat")`.
    `replication_files/ipums_data.RData` is truncated and cannot be loaded.
-2. Knit `replication_files/section 2 R.Rmd`. This writes `data/clean/acs_person.rds`.
-3. Knit `replication_files/section 3 R.Rmd`. This writes `data/clean/cz_panel.rds`
+2. Knit `replication_files/01_clean_acs.Rmd`. This writes `data/clean/acs_person.rds`.
+3. Knit `replication_files/02_build_panel.Rmd`. This writes `data/clean/cz_panel.rds`
    and prints a comparison with the paper's Table 3/4 means.
 4. Tests: `testthat::test_dir("replication_files/tests/testthat")` from the repo root.
 
@@ -1105,7 +1105,7 @@ Data files under `replication_files/data/` are not committed.
 
 ```bash
 git add replication_files/R/build_panel.R replication_files/tests/testthat/test-build_panel.R \
-  "replication_files/section 3 R.Rmd" "replication_files/section 3 R.html" README.md
+  replication_files/02_build_panel.Rmd replication_files/02_build_panel.html README.md
 git commit -m "Make Section 3 a thin runner with a CZ-level comparison to the paper
 
 <paste the compare_to_paper table here>
@@ -1660,7 +1660,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 10: Results runner on the real data
 
 **Files:**
-- Create: `replication_files/section 4 R.Rmd`
+- Create: `replication_files/03_results.Rmd`
 - Create (generated, committed): `replication_files/output/table3_estimates.csv`, `table3_compare.csv`, `event_study.csv`, `figure2.png`
 
 **Interfaces:**
@@ -1672,7 +1672,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 1: Write the runner**
 
-Create `replication_files/section 4 R.Rmd`:
+Create `replication_files/03_results.Rmd`:
 
 ````markdown
 ---
@@ -1720,7 +1720,7 @@ ggplot2::ggsave(file.path(paths$output, "figure2.png"), fig,
 
 - [ ] **Step 2: Knit it**
 
-Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/section 4 R.Rmd')"`
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/03_results.Rmd')"`
 
 Expected:
 - All four files appear in `replication_files/output/`.
@@ -1732,7 +1732,7 @@ If a coefficient differs by more than 2 paper standard errors, do not change the
 - [ ] **Step 3: Commit (outputs are small, contain no microdata, and the paper needs them)**
 
 ```bash
-git add "replication_files/section 4 R.Rmd" "replication_files/section 4 R.html" replication_files/output
+git add "replication_files/03_results.Rmd" "replication_files/03_results.html" replication_files/output
 git commit -m "Run Table 3 and Figure 2 on the real panel
 
 <paste the compare_table3 table here>
@@ -1892,7 +1892,7 @@ pct <- function(pan, y) sprintf("%.1f", abs(t3[panel == pan & outcome == y, pct]
 - Outcomes: employment share = 100 x employed / 2005 working-age CZ population. Hourly wage = annual earnings / (weeks x usual hours) for full-time workers (30+ hours), in 2014 dollars, winsorized at the 2.5th and 97.5th percentiles.
 - Authors' files we used: SC exposure by CZ-year (SC_frac), pop2000 weights, Bartik shift-share controls [@bartik1992].
 - Strengths: nationally representative, large, has local geography. Weaknesses: undocumented status is not observed; undercount of undocumented immigrants; weeks worked reported in intervals.
-- Our differences: report the Table A1 comparison from section 3 R.html (our means vs. the paper's).
+- Our differences: report the Table A1 comparison from 02_build_panel.html (our means vs. the paper's).
 -->
 
 # Empirical Strategy
@@ -2004,7 +2004,7 @@ Expected: `words:` between about 1,800 and 2,600. This count includes tables and
 - [ ] **Step 4: Add run instructions to `README.md`.** Append:
 
 ```markdown
-5. Knit `replication_files/section 4 R.Rmd`. This writes Table 3 and Figure 2 to `replication_files/output/`.
+5. Knit `replication_files/03_results.Rmd`. This writes Table 3 and Figure 2 to `replication_files/output/`.
 6. Knit `paper/paper.Rmd` to produce `paper/paper.docx` (needs only `replication_files/output/`).
 ```
 

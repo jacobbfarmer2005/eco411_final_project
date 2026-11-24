@@ -1,0 +1,37 @@
+---
+title: "01_clean"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
+source(here::here("replication_files", "R", "paths.R"))
+source(here::here("replication_files", "R", "clean_acs.R"))
+paths <- project_paths()
+```
+
+Functions live in `R/clean_acs.R` and are tested in `tests/testthat/`.
+Set `ACS_DAT` to read the raw IPUMS file from a non-default location.
+
+```{r inputs}
+check_inputs(c(paths$raw_ddi, paths$raw_dat))
+```
+
+```{r run}
+acs <- read_acs(paths$raw_ddi, paths$raw_dat) |>
+  flag_nativity_education() |>
+  flag_employment() |>
+  restrict_wage_sample() |>
+  convert_weeks() |>
+  deflate_income() |>
+  hourly_wage() |>
+  winsorize_wage() |>
+  flag_fulltime_wage() |>
+  check_clean()
+
+summarise_clean(acs)
+```
+
+```{r save}
+save_clean(slim_for_panel(acs), paths$acs_clean)
+```

@@ -1,0 +1,169 @@
+---
+title: "01_clean"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tibble)
+```
+
+## read_acs
+
+```{r}
+read_acs <- function(ddi, path) {
+  acs <- ipumsr::read_ipums_micro(ddi, data_file = path, verbose = FALSE)
+  names(acs) <- tolower(names(acs))
+  acs <- acs |> mutate(across(everything(), haven::zap_labels))
+
+  need <- c("year", "age", "perwt", "sex", "bpl", "educ", "empstat", "gq",
+            "ind1990", "incwage", "wkswork2", "uhrswork", "school",
+            "classwkr", "classwkrd", "cpi99")
+  stopifnot(all(need %in% names(acs)))
+
+  acs |> filter(age >= 20, age <= 64, year >= 2005, year <= 2014)
+}
+```
+
+## flag_nativity_education
+
+```{r}
+flag_nativity_education <- function(acs) {
+  acs |>
+    mutate(
+      usb  = bpl <= 120,
+      fb   = bpl > 120,
+      ls   = educ <= 6,
+      lefb = fb & ls,
+      male = sex == 1
+    )
+}
+```
+
+## flag_employment
+
+```{r}
+flag_employment <- function(acs) {
+  acs |>
+    mutate(
+      emp = empstat == 1 & gq %in% c(1, 2),
+      emp = emp & !(ind1990 >= 900 & ind1990 <= 940)
+    )
+}
+```
+
+## restrict_wage_sample
+
+```{r}
+restrict_wage_sample <- function(acs) {
+  bad_inc <- with(acs,
+    (wkswork2 == 0) | (uhrswork == 0) | is.na(uhrswork) | (school == 2) |
+    (classwkr == 1) | (classwkrd == 29) | (incwage %in% c(0, 999998, 999999)))
+  bad_inc[is.na(bad_inc)] <- FALSE
+
+  acs |> mutate(incwage = if_else(bad_inc, NA_real_, as.numeric(incwage)))
+}
+```
+
+## convert_weeks
+
+```{r}
+convert_weeks <- function(acs) {
+  acs |>
+    mutate(weeks = c(8.0, 20.8, 33.1, 42.4, 48.3, 51.9)[match(wkswork2, 1:6)])
+}
+```
+
+## deflate_income
+
+```{r}
+deflate_income <- function(acs) {
+  cpi99_2014 <- mean(acs$cpi99[acs$year == 2014])
+  stopifnot(is.finite(cpi99_2014))
+
+  acs |> mutate(real_inc = incwage * cpi99 / cpi99_2014)
+}
+```
+
+## hourly_wage
+
+```{r}
+hourly_wage <- function(acs) {
+  acs |> mutate(wage_raw = real_inc / (weeks * uhrswork))
+}
+```
+
+## winsorize_wage
+
+```{r}
+winsorize_wage <- function(acs) {
+  q <- quantile(acs$wage_raw, c(0.025, 0.975),
+                na.rm = TRUE, type = 2, names = FALSE)
+
+  acs |> mutate(wage = pmin(pmax(wage_raw, q[1]), q[2]))
+}
+```
+
+## flag_fulltime_wage
+
+```{r}
+flag_fulltime_wage <- function(acs) {
+  acs |> mutate(wage_ft = if_else(emp & uhrswork >= 30, wage, NA_real_))
+}
+```
+
+## check_means
+
+```{r}
+check_means <- function(acs) {
+  wmean <- function(d) weighted.mean(d$wage_ft, d$perwt, na.rm = TRUE)
+
+  chk <- tibble(
+    group = c("LEFB", "US-born"),
+    mean  = c(wmean(filter(acs, lefb, !is.na(wage_ft))),
+              wmean(filter(acs, usb,  !is.na(wage_ft)))),
+    paper = c(15.60, 24.39),
+    n     = c(sum(acs$lefb & !is.na(acs$wage_ft), na.rm = TRUE),
+              sum(acs$usb  & !is.na(acs$wage_ft), na.rm = TRUE))
+  ) |> mutate(diff = mean - paper)
+
+  if (any(abs(chk$diff) > 1)) {
+    warning("wage_ft means are more than $1 from Table A1; recheck the rules.")
+  }
+  chk
+}
+```
+
+## save_clean
+
+```{r}
+save_clean <- function(acs, path) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  saveRDS(acs, path)
+  invisible(acs)
+}
+```
+
+## run
+
+```{r}
+acs_path <- "C:/Users/Kuthn/Downloads/usa_00002.dat/usa_00001.dat.dat"
+ddi_path <- "C:/Users/Kuthn/OneDrive/Documents/GitHub/eco411_final_project/usa_00001.xml"
+
+acs <- read_acs(ddi_path, acs_path) |>
+  flag_nativity_education() |>
+  flag_employment() |>
+  restrict_wage_sample() |>
+  convert_weeks() |>
+  deflate_income() |>
+  hourly_wage() |>
+  winsorize_wage() |>
+  flag_fulltime_wage()
+
+check_means(acs)
+```
+
+```{r}
+save_clean(acs, "data/clean/acs_person.rds")
+```

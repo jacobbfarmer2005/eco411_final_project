@@ -79,7 +79,7 @@ test_that("check_clean catches missing years and bad wages", {
   expect_error(check_clean(dplyr::mutate(good, wage_ft = 0)), "non-positive")
 })
 
-test_that("the full pipeline on toy data yields the Section 3 columns", {
+test_that("the full pipeline on toy data yields the panel-step columns", {
   out <- toy_person(year = 2005:2014, bpl = 300) |>
     flag_nativity_education() |>
     flag_employment() |>

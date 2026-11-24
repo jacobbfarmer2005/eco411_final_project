@@ -1,5 +1,5 @@
 # Shared file locations, built from the repo root so the code runs on any
-# teammate's computer. Set the ACS_DAT environment variable to read the raw
+# computer. Set the ACS_DAT environment variable to read the raw
 # IPUMS .dat(.gz) from somewhere other than replication_files/data/raw/.
 
 project_paths <- function() {

@@ -1,4 +1,4 @@
-# Section 2: clean the person-level ACS extract.
+# Step 1 of the pipeline: clean the person-level ACS extract.
 # Rules follow original_files/code/0_EHLMV_clean_emp_data_FINAL.do and
 # 1_EHLMV_clean_wage_data_FINAL.do.
 library(dplyr)
@@ -64,8 +64,8 @@ occ_reference_set <- function(acs) {
     pull(occ2010)
 }
 
-# Fix: Stata drops employed people whose occupation is not in the 2005
-# reference set, and its mil/pa range starts at 894, not 900.
+# Employed = working, outside group quarters and military/public admin, and
+# in an occupation from the 2005 reference set, as in the Stata code.
 flag_employment <- function(acs) {
   acs <- flag_milpa(acs)
   occ_ok <- occ_reference_set(acs)
@@ -109,8 +109,8 @@ flag_fulltime_wage <- function(acs) {
   acs |> mutate(wage_ft = if_else(emp & uhrswork >= 30, wage, NA_real_))
 }
 
-# Replaces check_means(): the paper's $15.60 / $24.39 are CZ-level means, so
-# that comparison now lives in Section 3 (compare_to_paper).
+# Sanity checks on the cleaned data. Comparisons with the paper's means are
+# made at the commuting-zone level in the panel step (compare_to_paper).
 check_clean <- function(acs) {
   yrs <- sort(unique(acs$year))
   if (!identical(as.numeric(yrs), as.numeric(2005:2014))) {
