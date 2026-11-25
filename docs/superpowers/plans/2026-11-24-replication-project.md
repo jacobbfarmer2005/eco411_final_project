@@ -108,7 +108,7 @@
 | `replication_files/tests/testthat/test-tables.R` | create | Tests for tables.R |
 | `replication_files/tests/testthat/test-figures.R` | create | Tests for figures.R |
 | `replication_files/rmd_files/03_table3.Rmd` | create | Thin Table 3 runner: writes `output/table3_estimates.csv` and `table3_compare.csv` |
-| `replication_files/rmd_files/04_figure2.Rmd` | create | Thin Figure 2 runner: writes `output/event_study.csv` and `figure2.png` |
+| `replication_files/rmd_files/04_figure2.Rmd` | create | Thin Figure 2 runner: writes `output/event_study.csv` (Task 7) and `figure2.png` (Task 10) |
 | `replication_files/output/` | create (committed) | `table3_estimates.csv`, `table3_compare.csv`, `event_study.csv`, `figure2.png` |
 | `paper/paper.Rmd` | create | The replication paper (Word output) |
 | `paper/references.bib` | create | Bibliography (at least 5 entries) |
@@ -1374,6 +1374,8 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `replication_files/rmd_files/script_files/estimate.R` (append)
 - Modify: `replication_files/tests/testthat/test-estimate.R` (append)
+- Create: `replication_files/rmd_files/04_figure2.Rmd` (runner; Tasks 9–10 add the plot)
+- Create (generated, committed): `replication_files/output/event_study.csv`
 
 **Interfaces:**
 - Consumes: `add_sc_leads_lags()`, `sc_formula()`, `BARTIKS` (Task 6).
@@ -1451,10 +1453,65 @@ dl_event_study <- function(p, y) {
 Run: `Rscript -e "testthat::test_dir('replication_files/tests/testthat')"`
 Expected: `FAIL 0`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Create and knit the Figure 2 runner `04_figure2.Rmd`**
+
+For now it runs the event study and saves the estimates; Task 10 adds the plot.
+Create `replication_files/rmd_files/04_figure2.Rmd`:
+
+````markdown
+---
+title: "04_figure2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
+source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
+paths <- project_paths()
+dir.create(paths$output, showWarnings = FALSE)
+```
+
+Functions live in `script_files/estimate.R` and are tested in `tests/testthat/`.
+Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
+
+Equation (2) of East et al. (2023): distributed-lag model with two leads and
+lags 0-2 of `SC_frac`, with the same fixed effects, trends, Bartik controls,
+weights and clustering as Table 3 Panel B. The coefficients are cumulated into
+effects at event times -3 to 2, with event time -1 as the reference (0). Leads
+are missing in 2013-2014, so those years drop out, as in the authors' code.
+
+```{r panel}
+check_inputs(paths$cz_panel)
+panel <- add_sc_leads_lags(readRDS(paths$cz_panel))
+```
+
+## Event-study estimates
+
+Panel A: LEFB employment share. B: LEFB log wage. C: US-born employment share.
+D: US-born log wage.
+
+```{r event-study}
+FIG2_OUTCOMES <- c("emp_share_lefb", "lnw_lefb", "emp_share_usb", "lnw_usb")
+es_all <- rbindlist(lapply(FIG2_OUTCOMES, function(y) dl_event_study(panel, y)))
+knitr::kable(es_all, digits = 3)
+```
+
+```{r save}
+fwrite(es_all, file.path(paths$output, "event_study.csv"))
+```
+````
+
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/rmd_files/04_figure2.Rmd')"`
+
+Expected: `replication_files/output/event_study.csv` with 24 rows (4 outcomes × event times −3 to 2). In panel A (`emp_share_lefb`), the points at −3 and −2 are near zero and the points at 0–2 are negative.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add replication_files/rmd_files/script_files/estimate.R replication_files/tests/testthat/test-estimate.R
+git add replication_files/rmd_files/script_files/estimate.R replication_files/tests/testthat/test-estimate.R \
+  replication_files/rmd_files/04_figure2.Rmd replication_files/rmd_files/04_figure2.html \
+  replication_files/output/event_study.csv
 git commit -m "Add distributed-lag event study with cumulated effects
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1739,88 +1796,73 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task 10: Figure 2 runner on the real data
+### Task 10: Add the plot to the Figure 2 runner
 
 **Files:**
-- Create: `replication_files/rmd_files/04_figure2.Rmd`
-- Create (generated, committed): `replication_files/output/event_study.csv`, `figure2.png`
+- Modify: `replication_files/rmd_files/04_figure2.Rmd` (created in Task 7)
+- Create (generated, committed): `replication_files/output/figure2.png`; `event_study.csv` is regenerated
 
 **Interfaces:**
 - Consumes:
-  - `cz_panel.rds` (Task 5).
-  - `add_sc_leads_lags`, `fit_sc`, `dl_event_study` (Tasks 6–7).
+  - `cz_panel.rds` (Task 5); `add_sc_leads_lags`, `fit_sc`, `dl_event_study` (Tasks 6–7).
   - `figure2`, `FIG2_PANELS` (Task 9).
-- Produces `event_study.csv` (the `dl_event_study()` columns for the four `FIG2_PANELS` outcomes) and `figure2.png`. The paper (Task 11) reads them by these exact names, together with `table3_estimates.csv` and `table3_compare.csv` from `03_table3.Rmd`.
+- Produces `event_study.csv` and `figure2.png`. The paper (Task 11) reads them by these exact names, together with `table3_estimates.csv` and `table3_compare.csv` from `03_table3.Rmd`.
 
-- [ ] **Step 1: Write the runner**
+- [ ] **Step 1: Add `figures.R` and the plot to the runner**
 
-Create `replication_files/rmd_files/04_figure2.Rmd`:
+In `replication_files/rmd_files/04_figure2.Rmd`:
 
-````markdown
----
-title: "04_figure2"
-output: html_document
----
+1. Add to the setup chunk:
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
-source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
-source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
-source(here::here("replication_files", "rmd_files", "script_files", "figures.R"))
-paths <- project_paths()
-dir.create(paths$output, showWarnings = FALSE)
-```
+   ```r
+   source(here::here("replication_files", "rmd_files", "script_files", "figures.R"))
+   ```
 
-Functions live in `script_files/estimate.R` and `script_files/figures.R` and are
-tested in `tests/testthat/`. Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
+2. In the `event-study` chunk, replace the hard-coded outcome list with the one from `figures.R`:
 
-Equation (2) of East et al. (2023): distributed-lag model with two leads and
-lags 0-2 of `SC_frac`, cumulated with event time -1 as the reference. The gray
-line is the Table 3 / Table 4 Panel B estimate.
+   ```r
+   es_all <- rbindlist(lapply(names(FIG2_PANELS), function(y) dl_event_study(panel, y)))
+   knitr::kable(es_all, digits = 3)
+   ```
 
-```{r panel}
-check_inputs(paths$cz_panel)
-panel <- add_sc_leads_lags(readRDS(paths$cz_panel))
-```
+   (delete the `FIG2_OUTCOMES <- ...` line).
 
-## Event-study estimates
+3. Insert this chunk before the `save` chunk:
 
-```{r event-study}
-es_all <- rbindlist(lapply(names(FIG2_PANELS), function(y) dl_event_study(panel, y)))
-knitr::kable(es_all, digits = 3)
-```
+   ````markdown
+   ## Figure 2
 
-## Figure 2
+   ```{r figure2, fig.width=8, fig.height=6}
+   dd <- vapply(names(FIG2_PANELS),
+                function(y) unname(coef(fit_sc(panel, y, bartik = TRUE))["SC_frac"]),
+                numeric(1))
+   fig <- figure2(es_all, dd)
+   fig
+   ```
+   ````
 
-```{r figure2, fig.width=8, fig.height=6}
-dd <- vapply(names(FIG2_PANELS),
-             function(y) unname(coef(fit_sc(panel, y, bartik = TRUE))["SC_frac"]),
-             numeric(1))
-fig <- figure2(es_all, dd)
-fig
-```
+4. Add the PNG to the `save` chunk:
 
-```{r save}
-fwrite(es_all, file.path(paths$output, "event_study.csv"))
-ggplot2::ggsave(file.path(paths$output, "figure2.png"), fig,
-                width = 8, height = 6, dpi = 300)
-```
-````
+   ```r
+   fwrite(es_all, file.path(paths$output, "event_study.csv"))
+   ggplot2::ggsave(file.path(paths$output, "figure2.png"), fig,
+                   width = 8, height = 6, dpi = 300)
+   ```
 
 - [ ] **Step 2: Knit it**
 
 Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/rmd_files/04_figure2.Rmd')"`
 
 Expected:
-- `event_study.csv` and `figure2.png` appear in `replication_files/output/`.
-- `figure2.png` shows pre-period points near 0 and negative post-period points in panel A.
+- `figure2.png` appears in `replication_files/output/`; `event_study.csv` is unchanged.
+- `figure2.png` shows pre-period points near 0 and negative post-period points in panel A, with the gray line at the Panel B estimate.
 
 - [ ] **Step 3: Commit (outputs are small, contain no microdata, and the paper needs them)**
 
 ```bash
 git add replication_files/rmd_files/04_figure2.Rmd replication_files/rmd_files/04_figure2.html \
   replication_files/output/event_study.csv replication_files/output/figure2.png
-git commit -m "Run the Figure 2 event study on the real panel
+git commit -m "Add the Figure 2 plot to 04_figure2.Rmd
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```

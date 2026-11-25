@@ -1,0 +1,41 @@
+---
+title: "04_figure2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
+source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
+paths <- project_paths()
+dir.create(paths$output, showWarnings = FALSE)
+```
+
+Functions live in `script_files/estimate.R` and are tested in `tests/testthat/`.
+Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
+
+Equation (2) of East et al. (2023): distributed-lag model with two leads and
+lags 0-2 of `SC_frac`, with the same fixed effects, trends, Bartik controls,
+weights and clustering as Table 3 Panel B. The coefficients are cumulated into
+effects at event times -3 to 2, with event time -1 as the reference (0). Leads
+are missing in 2013-2014, so those years drop out, as in the authors' code.
+
+```{r panel}
+check_inputs(paths$cz_panel)
+panel <- add_sc_leads_lags(readRDS(paths$cz_panel))
+```
+
+## Event-study estimates
+
+Panel A: LEFB employment share. B: LEFB log wage. C: US-born employment share.
+D: US-born log wage.
+
+```{r event-study}
+FIG2_OUTCOMES <- c("emp_share_lefb", "lnw_lefb", "emp_share_usb", "lnw_usb")
+es_all <- rbindlist(lapply(FIG2_OUTCOMES, function(y) dl_event_study(panel, y)))
+knitr::kable(es_all, digits = 3)
+```
+
+```{r save}
+fwrite(es_all, file.path(paths$output, "event_study.csv"))
+```

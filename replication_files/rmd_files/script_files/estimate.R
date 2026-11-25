@@ -77,3 +77,35 @@ run_table3 <- function(p) {
   }
   rbindlist(rows)
 }
+
+# Equation (2): distributed-lag model with two leads and lags 0-2 of SC_frac.
+DL_TERMS <- c("F2_SC_frac", "F1_SC_frac", "L0_SC_frac", "L1_SC_frac", "L2_SC_frac")
+
+# Rows are event times -3..2; columns are DL_TERMS. Event time -1 is the
+# reference (0). Leads cumulate negatively, lags positively, matching the
+# lincom statements in the Stata code.
+DL_WEIGHTS <- rbind(
+  `-3` = c(-1, -1, 0, 0, 0),
+  `-2` = c( 0, -1, 0, 0, 0),
+  `-1` = c( 0,  0, 0, 0, 0),
+  `0`  = c( 0,  0, 1, 0, 0),
+  `1`  = c( 0,  0, 1, 1, 0),
+  `2`  = c( 0,  0, 1, 1, 1)
+)
+
+# Cumulated effects and their standard errors (the R version of lincom).
+cumulate_dl <- function(b, V) {
+  est <- as.vector(DL_WEIGHTS %*% b)
+  se  <- sqrt(rowSums((DL_WEIGHTS %*% V) * DL_WEIGHTS))
+  data.table(event_time = -3:2, beta = est, se = se,
+             ci_lo = est - 1.96 * se, ci_hi = est + 1.96 * se)
+}
+
+# Same fixed effects, trends, Bartiks, weights and clustering as Table 3
+# Panel B. `p` must already have the leads and lags (add_sc_leads_lags).
+dl_event_study <- function(p, y) {
+  fit <- fixest::feols(sc_formula(y, c(DL_TERMS, BARTIKS)), data = p,
+                       weights = ~pop2000, cluster = ~czone)
+  es <- cumulate_dl(coef(fit)[DL_TERMS], vcov(fit)[DL_TERMS, DL_TERMS])
+  es[, outcome := y][]
+}

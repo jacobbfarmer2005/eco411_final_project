@@ -48,3 +48,24 @@ test_that("run_table3 returns 12 rows in paper column order", {
   expect_equal(t3[panel == "A", outcome], names(TABLE3_OUTCOMES))
   expect_equal(t3[panel == "B", outcome], names(TABLE3_OUTCOMES))
 })
+
+test_that("cumulate_dl follows Schmidheiny-Siegloch with -1 as reference", {
+  es <- cumulate_dl(b = 1:5, V = diag(5))
+  expect_equal(es$event_time, -3:2)
+  expect_equal(es$beta, c(-3, -2, 0, 3, 7, 12))
+  expect_equal(es$se, sqrt(c(2, 1, 0, 1, 2, 3)))
+  expect_equal(es$ci_hi - es$beta, 1.96 * es$se)
+})
+
+test_that("cumulate_dl uses covariances, not just variances", {
+  V <- diag(5); V[1, 2] <- V[2, 1] <- 0.5
+  expect_equal(cumulate_dl(rep(0, 5), V)$se[1], sqrt(1 + 1 + 2 * 0.5))
+})
+
+test_that("dl_event_study shows flat pre-trends and the effect afterwards", {
+  p <- add_sc_leads_lags(sim_panel(n_cz = 150, beta = -0.5))
+  es <- dl_event_study(p, "y")
+  expect_true(all(abs(es[event_time < 0, beta]) < 0.06))
+  expect_true(all(abs(es[event_time >= 0, beta] + 0.5) < 0.06))
+  expect_equal(unique(es$outcome), "y")
+})
