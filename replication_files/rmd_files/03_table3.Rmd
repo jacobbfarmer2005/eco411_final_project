@@ -7,11 +7,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
 source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
 source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "tables.R"))
 paths <- project_paths()
 dir.create(paths$output, showWarnings = FALSE)
 ```
 
-Functions live in `script_files/estimate.R` and are tested in `tests/testthat/`.
+Functions live in `script_files/estimate.R` and `script_files/tables.R` and are tested in `tests/testthat/`.
 Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
 
 Equation (1) of East et al. (2023): outcome on `SC_frac` with CZ and year fixed
@@ -32,4 +33,21 @@ knitr::kable(t3, digits = 3)
 
 ```{r save}
 fwrite(t3, file.path(paths$output, "table3_estimates.csv"))
+```
+
+## Table 3 in the paper's format
+
+```{r table3-paper}
+knitr::kable(format_table3(t3))
+```
+
+Stars: \* p < .10, \*\* p < .05, \*\*\* p < .01. "..." means the % effect is not
+reported for log wages, as in the paper.
+
+## Comparison with East et al. (2023), Table 3
+
+```{r table3-compare}
+cmp <- compare_table3(t3)
+knitr::kable(cmp, digits = 3)
+fwrite(cmp, file.path(paths$output, "table3_compare.csv"))
 ```

@@ -353,8 +353,9 @@ display: none;
 </div>
 
 
-<p>Functions live in <code>script_files/estimate.R</code> and are tested
-in <code>tests/testthat/</code>. Input:
+<p>Functions live in <code>script_files/estimate.R</code> and
+<code>script_files/tables.R</code> and are tested in
+<code>tests/testthat/</code>. Input:
 <code>data/clean/cz_panel.rds</code> from
 <code>02_build_panel.Rmd</code>.</p>
 <p>Equation (1) of East et al. (2023): outcome on <code>SC_frac</code>
@@ -504,6 +505,300 @@ knitr::kable(t3, digits = 3)</code></pre>
 </tbody>
 </table>
 <pre class="r"><code>fwrite(t3, file.path(paths$output, &quot;table3_estimates.csv&quot;))</code></pre>
+</div>
+<div id="table-3-in-the-papers-format" class="section level2">
+<h2>Table 3 in the paper’s format</h2>
+<pre class="r"><code>knitr::kable(format_table3(t3))</code></pre>
+<table>
+<colgroup>
+<col width="23%" />
+<col width="12%" />
+<col width="14%" />
+<col width="12%" />
+<col width="9%" />
+<col width="14%" />
+<col width="12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">(1) All</th>
+<th align="left">(2) Females</th>
+<th align="left">(3) Males</th>
+<th align="left">(4) All</th>
+<th align="left">(5) Females</th>
+<th align="left">(6) Males</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">A. Baseline: SC</td>
+<td align="left">-0.404***</td>
+<td align="left">-0.062</td>
+<td align="left">-0.342***</td>
+<td align="left">-0.014</td>
+<td align="left">-0.007</td>
+<td align="left">-0.018</td>
+</tr>
+<tr class="even">
+<td align="left"></td>
+<td align="left">(0.116)</td>
+<td align="left">(0.043)</td>
+<td align="left">(0.086)</td>
+<td align="left">(0.009)</td>
+<td align="left">(0.015)</td>
+<td align="left">(0.012)</td>
+</tr>
+<tr class="odd">
+<td align="left">CZ-year trends</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="even">
+<td align="left">Bartiks</td>
+<td align="left"></td>
+<td align="left"></td>
+<td align="left"></td>
+<td align="left"></td>
+<td align="left"></td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">Y mean</td>
+<td align="left">6.74</td>
+<td align="left">2.54</td>
+<td align="left">4.20</td>
+<td align="left">2.73</td>
+<td align="left">2.59</td>
+<td align="left">2.80</td>
+</tr>
+<tr class="even">
+<td align="left">% effect</td>
+<td align="left">-6.00</td>
+<td align="left">-2.46</td>
+<td align="left">-8.14</td>
+<td align="left">…</td>
+<td align="left">…</td>
+<td align="left">…</td>
+</tr>
+<tr class="odd">
+<td align="left">Observations</td>
+<td align="left">7,400</td>
+<td align="left">7,400</td>
+<td align="left">7,400</td>
+<td align="left">7,383</td>
+<td align="left">7,331</td>
+<td align="left">7,367</td>
+</tr>
+<tr class="even">
+<td align="left">B. Add Bartiks: SC</td>
+<td align="left">-0.394***</td>
+<td align="left">-0.062*</td>
+<td align="left">-0.332***</td>
+<td align="left">-0.016*</td>
+<td align="left">-0.007</td>
+<td align="left">-0.020</td>
+</tr>
+<tr class="odd">
+<td align="left"></td>
+<td align="left">(0.093)</td>
+<td align="left">(0.033)</td>
+<td align="left">(0.076)</td>
+<td align="left">(0.009)</td>
+<td align="left">(0.015)</td>
+<td align="left">(0.012)</td>
+</tr>
+<tr class="even">
+<td align="left">CZ-year trends</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="odd">
+<td align="left">Bartiks</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+<td align="left">Yes</td>
+</tr>
+<tr class="even">
+<td align="left">Y mean</td>
+<td align="left">6.74</td>
+<td align="left">2.54</td>
+<td align="left">4.20</td>
+<td align="left">2.73</td>
+<td align="left">2.59</td>
+<td align="left">2.80</td>
+</tr>
+<tr class="odd">
+<td align="left">% effect</td>
+<td align="left">-5.84</td>
+<td align="left">-2.43</td>
+<td align="left">-7.90</td>
+<td align="left">…</td>
+<td align="left">…</td>
+<td align="left">…</td>
+</tr>
+<tr class="even">
+<td align="left">Observations</td>
+<td align="left">7,400</td>
+<td align="left">7,400</td>
+<td align="left">7,400</td>
+<td align="left">7,383</td>
+<td align="left">7,331</td>
+<td align="left">7,367</td>
+</tr>
+</tbody>
+</table>
+<p>Stars: * p &lt; .10, ** p &lt; .05, *** p &lt; .01. “…” means the %
+effect is not reported for log wages, as in the paper.</p>
+</div>
+<div id="comparison-with-east-et-al.-2023-table-3" class="section level2">
+<h2>Comparison with East et al. (2023), Table 3</h2>
+<pre class="r"><code>cmp &lt;- compare_table3(t3)
+knitr::kable(cmp, digits = 3)</code></pre>
+<table>
+<colgroup>
+<col width="8%" />
+<col width="25%" />
+<col width="16%" />
+<col width="14%" />
+<col width="10%" />
+<col width="13%" />
+<col width="11%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">panel</th>
+<th align="left">outcome</th>
+<th align="right">paper_beta</th>
+<th align="right">ours_beta</th>
+<th align="right">diff</th>
+<th align="right">paper_se</th>
+<th align="right">ours_se</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">A</td>
+<td align="left">emp_share_lefb</td>
+<td align="right">-0.398</td>
+<td align="right">-0.404</td>
+<td align="right">-0.006</td>
+<td align="right">0.113</td>
+<td align="right">0.116</td>
+</tr>
+<tr class="even">
+<td align="left">A</td>
+<td align="left">emp_share_lefb_f</td>
+<td align="right">-0.062</td>
+<td align="right">-0.062</td>
+<td align="right">0.000</td>
+<td align="right">0.041</td>
+<td align="right">0.043</td>
+</tr>
+<tr class="odd">
+<td align="left">A</td>
+<td align="left">emp_share_lefb_m</td>
+<td align="right">-0.336</td>
+<td align="right">-0.342</td>
+<td align="right">-0.006</td>
+<td align="right">0.085</td>
+<td align="right">0.086</td>
+</tr>
+<tr class="even">
+<td align="left">A</td>
+<td align="left">lnw_lefb</td>
+<td align="right">-0.013</td>
+<td align="right">-0.014</td>
+<td align="right">-0.001</td>
+<td align="right">0.009</td>
+<td align="right">0.009</td>
+</tr>
+<tr class="odd">
+<td align="left">A</td>
+<td align="left">lnw_lefb_f</td>
+<td align="right">-0.007</td>
+<td align="right">-0.007</td>
+<td align="right">0.000</td>
+<td align="right">0.015</td>
+<td align="right">0.015</td>
+</tr>
+<tr class="even">
+<td align="left">A</td>
+<td align="left">lnw_lefb_m</td>
+<td align="right">-0.016</td>
+<td align="right">-0.018</td>
+<td align="right">-0.002</td>
+<td align="right">0.012</td>
+<td align="right">0.012</td>
+</tr>
+<tr class="odd">
+<td align="left">B</td>
+<td align="left">emp_share_lefb</td>
+<td align="right">-0.387</td>
+<td align="right">-0.394</td>
+<td align="right">-0.007</td>
+<td align="right">0.093</td>
+<td align="right">0.093</td>
+</tr>
+<tr class="even">
+<td align="left">B</td>
+<td align="left">emp_share_lefb_f</td>
+<td align="right">-0.061</td>
+<td align="right">-0.062</td>
+<td align="right">-0.001</td>
+<td align="right">0.032</td>
+<td align="right">0.033</td>
+</tr>
+<tr class="odd">
+<td align="left">B</td>
+<td align="left">emp_share_lefb_m</td>
+<td align="right">-0.326</td>
+<td align="right">-0.332</td>
+<td align="right">-0.006</td>
+<td align="right">0.075</td>
+<td align="right">0.076</td>
+</tr>
+<tr class="even">
+<td align="left">B</td>
+<td align="left">lnw_lefb</td>
+<td align="right">-0.014</td>
+<td align="right">-0.016</td>
+<td align="right">-0.002</td>
+<td align="right">0.009</td>
+<td align="right">0.009</td>
+</tr>
+<tr class="odd">
+<td align="left">B</td>
+<td align="left">lnw_lefb_f</td>
+<td align="right">-0.006</td>
+<td align="right">-0.007</td>
+<td align="right">-0.001</td>
+<td align="right">0.015</td>
+<td align="right">0.015</td>
+</tr>
+<tr class="even">
+<td align="left">B</td>
+<td align="left">lnw_lefb_m</td>
+<td align="right">-0.018</td>
+<td align="right">-0.020</td>
+<td align="right">-0.002</td>
+<td align="right">0.012</td>
+<td align="right">0.012</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>fwrite(cmp, file.path(paths$output, &quot;table3_compare.csv&quot;))</code></pre>
 </div>
 
 
