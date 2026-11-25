@@ -4,7 +4,7 @@
 
 **Goal:** Replicate Table 3 and Figure 2 of East et al. (2023) and deliver the 5–7 page replication paper due **December 4, 2026**. Along the way, improve the existing Section 2 (ACS cleaning) and Section 3 (CZ panel) code so it is tested, portable and faithful to the authors' Stata code.
 
-**Architecture:** Every analysis step is a function in `replication_files/rmd_files/script_files/*.R`, tested with `testthat` on toy or simulated data. Thin R Markdown runners call those functions in order: `01_clean_acs.Rmd` (clean ACS) → `02_build_panel.Rmd` (CZ panel) → `03_results.Rmd` (regressions, Table 3, Figure 2). Results are written to `replication_files/output/`. The paper (`paper/paper.Rmd` → Word) reads only those output files, so it can be knitted without the microdata. All file locations come from one `project_paths()` function built on `here::here()`.
+**Architecture:** Every analysis step is a function in `replication_files/rmd_files/script_files/*.R`, tested with `testthat` on toy or simulated data. Thin R Markdown runners call those functions in order: `01_clean_acs.Rmd` (clean ACS) → `02_build_panel.Rmd` (CZ panel) → `03_table3.Rmd` (Table 3 regressions) → `04_figure2.Rmd` (event study, Figure 2). Results are written to `replication_files/output/`. The paper (`paper/paper.Rmd` → Word) reads only those output files, so it can be knitted without the microdata. All file locations come from one `project_paths()` function built on `here::here()`.
 
 **Tech Stack:** R 4.6.1, dplyr (Section 2), data.table (Sections 3–4), ipumsr, haven, here, fixest, ggplot2, cowplot, testthat 3e, withr, rmarkdown/knitr with pandoc citeproc (Word output; no LaTeX is installed).
 
@@ -107,7 +107,8 @@
 | `replication_files/tests/testthat/test-estimate.R` | create | Simulated-panel tests for estimate.R |
 | `replication_files/tests/testthat/test-tables.R` | create | Tests for tables.R |
 | `replication_files/tests/testthat/test-figures.R` | create | Tests for figures.R |
-| `replication_files/rmd_files/03_results.Rmd` | create | Thin results runner that writes `output/` |
+| `replication_files/rmd_files/03_table3.Rmd` | create | Thin Table 3 runner: writes `output/table3_estimates.csv` and `table3_compare.csv` |
+| `replication_files/rmd_files/04_figure2.Rmd` | create | Thin Figure 2 runner: writes `output/event_study.csv` and `figure2.png` |
 | `replication_files/output/` | create (committed) | `table3_estimates.csv`, `table3_compare.csv`, `event_study.csv`, `figure2.png` |
 | `paper/paper.Rmd` | create | The replication paper (Word output) |
 | `paper/references.bib` | create | Bibliography (at least 5 entries) |
@@ -1119,6 +1120,8 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `replication_files/rmd_files/script_files/estimate.R`
+- Create: `replication_files/rmd_files/03_table3.Rmd` (runner)
+- Create (generated, committed): `replication_files/output/table3_estimates.csv`
 - Modify: `replication_files/tests/testthat/helper-setup.R` (append `sim_panel()`)
 - Test: `replication_files/tests/testthat/test-estimate.R`
 
@@ -1307,11 +1310,58 @@ run_table3 <- function(p) {
 Run: `Rscript -e "testthat::test_dir('replication_files/tests/testthat')"`
 Expected: `FAIL 0`. fixest may print notes about removed NA observations; those are fine.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Create and knit the Table 3 runner `03_table3.Rmd`**
+
+Create `replication_files/rmd_files/03_table3.Rmd`:
+
+````markdown
+---
+title: "03_table3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
+source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
+paths <- project_paths()
+dir.create(paths$output, showWarnings = FALSE)
+```
+
+Functions live in `script_files/estimate.R` and are tested in `tests/testthat/`.
+Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
+
+Equation (1) of East et al. (2023): outcome on `SC_frac` with CZ and year fixed
+effects and CZ-specific linear trends, weighted by `pop2000`, standard errors
+clustered by CZ. Panel A is the baseline; Panel B adds the Bartik controls.
+
+```{r panel}
+check_inputs(paths$cz_panel)
+panel <- readRDS(paths$cz_panel)
+```
+
+## Table 3 estimates
+
+```{r table3}
+t3 <- run_table3(panel)
+knitr::kable(t3, digits = 3)
+```
+
+```{r save}
+fwrite(t3, file.path(paths$output, "table3_estimates.csv"))
+```
+````
+
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/rmd_files/03_table3.Rmd')"`
+
+Expected: `replication_files/output/table3_estimates.csv` with 12 rows. Every β has the same sign as the paper's, and observation counts are 7,400 / 7,383 / 7,331 / 7,367.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add replication_files/rmd_files/script_files/estimate.R replication_files/tests/testthat/test-estimate.R \
-  replication_files/tests/testthat/helper-setup.R
+  replication_files/tests/testthat/helper-setup.R replication_files/rmd_files/03_table3.Rmd \
+  replication_files/rmd_files/03_table3.html replication_files/output/table3_estimates.csv
 git commit -m "Add SC leads/lags and the Table 3 two-way fixed effects model
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1541,10 +1591,42 @@ compare_table3 <- function(res) {
 Run: `Rscript -e "testthat::test_dir('replication_files/tests/testthat')"`
 Expected: `FAIL 0`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Add the paper-style table and the comparison to `03_table3.Rmd`**
+
+In `replication_files/rmd_files/03_table3.Rmd`, add `tables.R` to the setup chunk:
+
+```r
+source(here::here("replication_files", "rmd_files", "script_files", "tables.R"))
+```
+
+Then append these chunks at the end of the file:
+
+````markdown
+## Table 3 in the paper's format
+
+```{r table3-paper}
+knitr::kable(format_table3(t3))
+```
+
+## Comparison with East et al. (2023), Table 3
+
+```{r table3-compare}
+cmp <- compare_table3(t3)
+knitr::kable(cmp, digits = 3)
+fwrite(cmp, file.path(paths$output, "table3_compare.csv"))
+```
+````
+
+Knit it again (same command as Task 6, Step 6). Expected: `replication_files/output/table3_compare.csv` with 12 rows; every `ours_beta` has the same sign as `paper_beta`.
+
+If a coefficient differs by more than 2 paper standard errors, do not change the specification to force a match. Record it for the Results section (Task 12).
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add replication_files/rmd_files/script_files/tables.R replication_files/tests/testthat/test-tables.R
+git add replication_files/rmd_files/script_files/tables.R replication_files/tests/testthat/test-tables.R \
+  replication_files/rmd_files/03_table3.Rmd replication_files/rmd_files/03_table3.html \
+  replication_files/output/table3_compare.csv
 git commit -m "Add paper-style Table 3 formatting and comparison with the paper
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
@@ -1657,61 +1739,68 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task 10: Results runner on the real data
+### Task 10: Figure 2 runner on the real data
 
 **Files:**
-- Create: `replication_files/rmd_files/03_results.Rmd`
-- Create (generated, committed): `replication_files/output/table3_estimates.csv`, `table3_compare.csv`, `event_study.csv`, `figure2.png`
+- Create: `replication_files/rmd_files/04_figure2.Rmd`
+- Create (generated, committed): `replication_files/output/event_study.csv`, `figure2.png`
 
 **Interfaces:**
 - Consumes:
   - `cz_panel.rds` (Task 5).
-  - `add_sc_leads_lags`, `run_table3`, `fit_sc`, `dl_event_study` (Tasks 6–7).
-  - `format_table3`, `compare_table3` (Task 8); `figure2`, `FIG2_PANELS` (Task 9).
-- Produces the four output files. The paper (Task 11) reads them by these exact names. `table3_estimates.csv` has the `run_table3()` columns. `event_study.csv` has the `dl_event_study()` columns for the four `FIG2_PANELS` outcomes.
+  - `add_sc_leads_lags`, `fit_sc`, `dl_event_study` (Tasks 6–7).
+  - `figure2`, `FIG2_PANELS` (Task 9).
+- Produces `event_study.csv` (the `dl_event_study()` columns for the four `FIG2_PANELS` outcomes) and `figure2.png`. The paper (Task 11) reads them by these exact names, together with `table3_estimates.csv` and `table3_compare.csv` from `03_table3.Rmd`.
 
 - [ ] **Step 1: Write the runner**
 
-Create `replication_files/rmd_files/03_results.Rmd`:
+Create `replication_files/rmd_files/04_figure2.Rmd`:
 
 ````markdown
 ---
-title: "03_results"
+title: "04_figure2"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
-for (f in list.files(here::here("replication_files", "rmd_files", "script_files"), pattern = "\\.R$",
-                     full.names = TRUE)) source(f)
+source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "figures.R"))
 paths <- project_paths()
 dir.create(paths$output, showWarnings = FALSE)
 ```
+
+Functions live in `script_files/estimate.R` and `script_files/figures.R` and are
+tested in `tests/testthat/`. Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
+
+Equation (2) of East et al. (2023): distributed-lag model with two leads and
+lags 0-2 of `SC_frac`, cumulated with event time -1 as the reference. The gray
+line is the Table 3 / Table 4 Panel B estimate.
 
 ```{r panel}
 check_inputs(paths$cz_panel)
 panel <- add_sc_leads_lags(readRDS(paths$cz_panel))
 ```
 
-## Table 3
+## Event-study estimates
 
-```{r table3}
-t3 <- run_table3(panel)
-knitr::kable(format_table3(t3))
-knitr::kable(compare_table3(t3), digits = 3)
-fwrite(t3, file.path(paths$output, "table3_estimates.csv"))
-fwrite(compare_table3(t3), file.path(paths$output, "table3_compare.csv"))
+```{r event-study}
+es_all <- rbindlist(lapply(names(FIG2_PANELS), function(y) dl_event_study(panel, y)))
+knitr::kable(es_all, digits = 3)
 ```
 
 ## Figure 2
 
 ```{r figure2, fig.width=8, fig.height=6}
-es_all <- rbindlist(lapply(names(FIG2_PANELS), function(y) dl_event_study(panel, y)))
 dd <- vapply(names(FIG2_PANELS),
              function(y) unname(coef(fit_sc(panel, y, bartik = TRUE))["SC_frac"]),
              numeric(1))
 fig <- figure2(es_all, dd)
 fig
+```
+
+```{r save}
 fwrite(es_all, file.path(paths$output, "event_study.csv"))
 ggplot2::ggsave(file.path(paths$output, "figure2.png"), fig,
                 width = 8, height = 6, dpi = 300)
@@ -1720,24 +1809,20 @@ ggplot2::ggsave(file.path(paths$output, "figure2.png"), fig,
 
 - [ ] **Step 2: Knit it**
 
-Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/rmd_files/03_results.Rmd')"`
+Run: `Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:/Program Files/RStudio/resources/app/bin/quarto/bin/tools'); rmarkdown::render('replication_files/rmd_files/04_figure2.Rmd')"`
 
 Expected:
-- All four files appear in `replication_files/output/`.
-- In `table3_compare.csv`, every `ours_beta` has the same sign as `paper_beta`, and Panel B column 1 is within about 0.1 of −0.387.
+- `event_study.csv` and `figure2.png` appear in `replication_files/output/`.
 - `figure2.png` shows pre-period points near 0 and negative post-period points in panel A.
-
-If a coefficient differs by more than 2 paper standard errors, do not change the specification to force a match. Record it for the Results section (Task 12). The assignment asks for discrepancies to be discussed.
 
 - [ ] **Step 3: Commit (outputs are small, contain no microdata, and the paper needs them)**
 
 ```bash
-git add "replication_files/rmd_files/03_results.Rmd" "replication_files/rmd_files/03_results.html" replication_files/output
-git commit -m "Run Table 3 and Figure 2 on the real panel
+git add replication_files/rmd_files/04_figure2.Rmd replication_files/rmd_files/04_figure2.html \
+  replication_files/output/event_study.csv replication_files/output/figure2.png
+git commit -m "Run the Figure 2 event study on the real panel
 
-<paste the compare_table3 table here>
-
-Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -2004,7 +2089,7 @@ Expected: `words:` between about 1,800 and 2,600. This count includes tables and
 - [ ] **Step 4: Add run instructions to `README.md`.** Append:
 
 ```markdown
-5. Knit `replication_files/rmd_files/03_results.Rmd`. This writes Table 3 and Figure 2 to `replication_files/output/`.
+5. Knit `replication_files/rmd_files/03_table3.Rmd` (Table 3) and `replication_files/rmd_files/04_figure2.Rmd` (Figure 2). They write to `replication_files/output/`.
 6. Knit `paper/paper.Rmd` to produce `paper/paper.docx` (needs only `replication_files/output/`).
 ```
 

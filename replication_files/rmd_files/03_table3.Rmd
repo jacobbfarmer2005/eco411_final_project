@@ -1,0 +1,35 @@
+---
+title: "03_table3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
+source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
+paths <- project_paths()
+dir.create(paths$output, showWarnings = FALSE)
+```
+
+Functions live in `script_files/estimate.R` and are tested in `tests/testthat/`.
+Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
+
+Equation (1) of East et al. (2023): outcome on `SC_frac` with CZ and year fixed
+effects and CZ-specific linear trends, weighted by `pop2000`, standard errors
+clustered by CZ. Panel A is the baseline; Panel B adds the Bartik controls.
+
+```{r panel}
+check_inputs(paths$cz_panel)
+panel <- readRDS(paths$cz_panel)
+```
+
+## Table 3 estimates
+
+```{r table3}
+t3 <- run_table3(panel)
+knitr::kable(t3, digits = 3)
+```
+
+```{r save}
+fwrite(t3, file.path(paths$output, "table3_estimates.csv"))
+```

@@ -17,3 +17,24 @@ toy_person <- function(...) {
   base[names(args)] <- args
   tibble::as_tibble(base)
 }
+
+# Balanced CZ x year panel with staggered SC adoption and a known effect.
+sim_panel <- function(n_cz = 80, beta = -0.5, seed = 1) {
+  set.seed(seed)
+  years <- 2005:2014
+  adopt <- sample(2008:2013, n_cz, replace = TRUE)
+  pop   <- runif(n_cz, 1e4, 1e6)
+  a     <- rnorm(n_cz, 5)
+  g     <- rnorm(n_cz, 0, 0.1)
+  yfe   <- rnorm(length(years))
+  p <- data.table::CJ(czone = seq_len(n_cz), year = years)
+  p[, `:=`(
+    SC_frac = as.numeric(year >= adopt[czone]),
+    pop2000 = pop[czone],
+    shift_share_sample_fb  = rnorm(.N, 100, 10),
+    shift_share_sample_usb = rnorm(.N, 100, 10)
+  )]
+  p[, y := a[czone] + g[czone] * (year - 2005) + yfe[year - 2004] +
+         beta * SC_frac + 0.01 * shift_share_sample_fb + rnorm(.N, 0, 0.05)]
+  p[]
+}
