@@ -7,11 +7,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = TRUE)
 source(here::here("replication_files", "rmd_files", "script_files", "paths.R"))
 source(here::here("replication_files", "rmd_files", "script_files", "estimate.R"))
+source(here::here("replication_files", "rmd_files", "script_files", "figures.R"))
 paths <- project_paths()
 dir.create(paths$output, showWarnings = FALSE)
 ```
 
-Functions live in `script_files/estimate.R` and are tested in `tests/testthat/`.
+Functions live in `script_files/estimate.R` and `script_files/figures.R` and are tested in `tests/testthat/`.
 Input: `data/clean/cz_panel.rds` from `02_build_panel.Rmd`.
 
 Equation (2) of East et al. (2023): distributed-lag model with two leads and
@@ -31,11 +32,26 @@ Panel A: LEFB employment share. B: LEFB log wage. C: US-born employment share.
 D: US-born log wage.
 
 ```{r event-study}
-FIG2_OUTCOMES <- c("emp_share_lefb", "lnw_lefb", "emp_share_usb", "lnw_usb")
-es_all <- rbindlist(lapply(FIG2_OUTCOMES, function(y) dl_event_study(panel, y)))
+es_all <- rbindlist(lapply(names(FIG2_PANELS), function(y) dl_event_study(panel, y)))
 knitr::kable(es_all, digits = 3)
+```
+
+## Figure 2
+
+Black dots: cumulated effects. Dashed bars: 95% confidence intervals. Dotted
+line: SC adoption. Gray line over event times 0-2: the difference-in-differences
+estimate (Table 3 / Table 4 Panel B).
+
+```{r figure2, fig.width=8, fig.height=6}
+dd <- vapply(names(FIG2_PANELS),
+             function(y) unname(coef(fit_sc(panel, y, bartik = TRUE))["SC_frac"]),
+             numeric(1))
+fig <- figure2(es_all, dd)
+fig
 ```
 
 ```{r save}
 fwrite(es_all, file.path(paths$output, "event_study.csv"))
+ggplot2::ggsave(file.path(paths$output, "figure2.png"), fig,
+                width = 8, height = 6, dpi = 300)
 ```
